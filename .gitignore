@@ -1,0 +1,15 @@
+# Ignore all runtime data
+audio_input/
+audio_segments/
+transcripts_raw/
+transcripts_labelled/
+speaker_maps/
+summaries/
+transcription_pipeline/transcripts.db
+*.npy
+*.wav
+*.mp3
+*.log
+*.bak
+.env
+__pycache__/
