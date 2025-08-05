@@ -32,6 +32,13 @@ CREATE TABLE IF NOT EXISTS speakers (
     profile_path TEXT,
     last_seen TEXT
 );
+
+CREATE TABLE IF NOT EXISTS jobs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    file_path TEXT UNIQUE NOT NULL,
+    status TEXT DEFAULT 'pending',
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
 """)
 
 conn.commit()

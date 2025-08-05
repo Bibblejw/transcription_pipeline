@@ -40,6 +40,18 @@ def get_recordings():
     return [dict(row) for row in rows]
 
 
+@app.get("/api/jobs")
+def get_jobs():
+    """Return all jobs with their status and creation time."""
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+    rows = cursor.execute(
+        "SELECT id, file_path, status, created_at FROM jobs ORDER BY created_at DESC"
+    ).fetchall()
+    return [dict(row) for row in rows]
+
+
 @app.get("/api/segments/{recording_id}")
 def get_segments(recording_id: int):
     conn = sqlite3.connect(DB_PATH)
