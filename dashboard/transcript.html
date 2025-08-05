@@ -8,6 +8,7 @@
     .segment { display: flex; justify-content: space-between; align-items: center; padding: 0.75rem; border-left: 4px solid #666; background: #f9f9f9; margin: 0.5rem 0; }
     .segment .left { flex: 1; }
     .segment .right { white-space: nowrap; margin-left: 1rem; font-size: 0.9rem; color: #555; }
+    .segment.candidate { border-left-color: #f90; }
   </style>
 </head>
 <body>
@@ -15,9 +16,22 @@
   <p><a href="/dashboard/transcripts.html">⬅️ Back to recordings</a></p>
   <div id="segments"></div>
   <script>
+    let speakers = {};
+
     function getId() {
       const params = new URLSearchParams(location.search);
       return params.get('id');
+    }
+
+    async function loadSpeakers() {
+      const res = await fetch('/api/speakers');
+      const list = await res.json();
+      speakers = {};
+      list.forEach(sp => speakers[sp.id] = sp.label || sp.id);
+    }
+
+    function speakerName(id) {
+      return speakers[id] || id || 'Unknown';
     }
 
     async function loadSegments() {
@@ -29,17 +43,44 @@
       segs.forEach(seg => {
         const div = document.createElement('div');
         div.className = 'segment';
+        div.id = `seg-${seg.id}`;
+        const options = Object.entries(speakers)
+          .map(([sid, label]) => `<option value="${sid}" ${sid === seg.speaker_id ? 'selected' : ''}>${label}</option>`)
+          .join('');
         div.innerHTML = `
-          <div class="left"><strong>[${seg.speaker_id || 'Unknown'}]</strong> ${seg.transcript}</div>
+          <div class="left"><strong>[<span class="speaker-label">${seg.speaker_label || speakerName(seg.speaker_id)}</span>]</strong> ${seg.transcript}
+            <select onchange="changeSpeaker(${seg.id}, this.value)">
+              <option value="">Unknown</option>${options}
+            </select>
+          </div>
           <div class="right">${seg.start_time.toFixed(1)}–${seg.end_time.toFixed(1)}s ${seg.embedding_path ? `<a href="#" onclick="play('/segments/${seg.embedding_path.split('/').pop()}');return false;" title="Play">🔊</a>` : ''}</div>
         `;
         container.appendChild(div);
       });
     }
 
+    async function changeSpeaker(id, speakerId) {
+      await fetch(`/api/segments/${id}/speaker`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ speaker_id: speakerId })
+      }).then(r => r.json()).then(res => {
+        document.querySelector(`#seg-${id} .speaker-label`).textContent = speakerName(speakerId);
+        if (res.candidates) {
+          res.candidates.forEach(cid => {
+            const el = document.getElementById(`seg-${cid}`);
+            if (el) el.classList.add('candidate');
+          });
+        }
+      });
+    }
+
     function play(url) { new Audio(url).play(); }
 
-    loadSegments();
+    (async function init() {
+      await loadSpeakers();
+      await loadSegments();
+    })();
   </script>
 </body>
 </html>

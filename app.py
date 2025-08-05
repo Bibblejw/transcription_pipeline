@@ -9,6 +9,7 @@ import sys
 import subprocess
 import os
 from dotenv import load_dotenv
+import numpy as np
 
 sys.path.append(str(Path(__file__).parent / "scripts"))
 
@@ -92,10 +93,12 @@ def get_segments(recording_id: int):
     cursor = conn.cursor()
 
     query = """
-    SELECT id, start_time, end_time, speaker_id, transcript, embedding_path
-    FROM segments
-    WHERE recording_id = ?
-    ORDER BY start_time ASC
+    SELECT s.id, s.start_time, s.end_time, s.speaker_id, sp.label AS speaker_label,
+           s.transcript, s.embedding_path
+    FROM segments s
+    LEFT JOIN speakers sp ON sp.id = s.speaker_id
+    WHERE s.recording_id = ?
+    ORDER BY s.start_time ASC
     """
     rows = cursor.execute(query, (recording_id,)).fetchall()
     return [dict(row) for row in rows]
@@ -145,6 +148,10 @@ def identify_recording(recording_id: int, background_tasks: BackgroundTasks):
 
 class SpeakerUpdate(BaseModel):
     label: str
+
+
+class SegmentSpeakerUpdate(BaseModel):
+    speaker_id: str
 
 
 @app.get("/api/speakers")
@@ -199,3 +206,57 @@ def update_speaker(speaker_id: str, payload: SpeakerUpdate):
     conn.commit()
     conn.close()
     return {"status": "ok"}
+
+
+@app.post("/api/segments/{segment_id}/speaker")
+def update_segment_speaker(segment_id: int, payload: SegmentSpeakerUpdate):
+    """Assign a segment to a speaker and suggest similar segments."""
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute(
+        "UPDATE segments SET speaker_id = ? WHERE id = ?",
+        (payload.speaker_id, segment_id),
+    )
+    conn.commit()
+
+    row = cursor.execute(
+        "SELECT embedding_path, recording_id FROM segments WHERE id = ?",
+        (segment_id,),
+    ).fetchone()
+
+    candidates: list[int] = []
+    if row and row[0]:
+        emb_path = Path(row[0])
+        if not emb_path.is_absolute():
+            emb_path = AUDIO_SEGMENTS_DIR / emb_path.name
+        try:
+            from resemblyzer import VoiceEncoder, preprocess_wav
+
+            encoder = VoiceEncoder()
+            wav = preprocess_wav(str(emb_path))
+            target_emb = encoder.embed_utterance(wav)
+
+            others = cursor.execute(
+                "SELECT id, embedding_path FROM segments WHERE recording_id = ? AND id != ?",
+                (row[1], segment_id),
+            ).fetchall()
+
+            for sid, path in others:
+                if not path:
+                    continue
+                path = Path(path)
+                if not path.is_absolute():
+                    path = AUDIO_SEGMENTS_DIR / path.name
+                try:
+                    wav2 = preprocess_wav(str(path))
+                    emb2 = encoder.embed_utterance(wav2)
+                    dist = 1 - float(np.dot(target_emb, emb2) / (np.linalg.norm(target_emb) * np.linalg.norm(emb2) + 1e-10))
+                    if dist < 0.25:
+                        candidates.append(sid)
+                except Exception:
+                    continue
+        except Exception:
+            pass
+
+    conn.close()
+    return {"status": "ok", "candidates": candidates}
