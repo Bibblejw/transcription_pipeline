@@ -77,9 +77,8 @@ def process_job(job_id: int):
         raise HTTPException(status_code=500, detail=str(e))
     finally:
         conn.close()
-    return {"status": "completed"}
-
-
+    return {"status": "completed}
+            
 @app.get("/api/segments/{recording_id}")
 def get_segments(recording_id: int):
     conn = sqlite3.connect(DB_PATH)
