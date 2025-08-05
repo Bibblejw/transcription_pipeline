@@ -184,6 +184,11 @@ class SegmentSpeakerUpdate(BaseModel):
     speaker_id: str
 
 
+class SpeakerMerge(BaseModel):
+    source_id: str
+    target_id: str
+
+
 @app.get("/api/speakers")
 def get_speakers():
     conn = sqlite3.connect(DB_PATH)
@@ -233,6 +238,50 @@ def update_speaker(speaker_id: str, payload: SpeakerUpdate):
     cursor.execute(
         "UPDATE speakers SET label = ? WHERE id = ?", (payload.label, speaker_id)
     )
+    conn.commit()
+    conn.close()
+    return {"status": "ok"}
+
+
+@app.post("/api/speakers/merge")
+def merge_speakers(payload: SpeakerMerge):
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute(
+        "UPDATE segments SET speaker_id = ? WHERE speaker_id = ?",
+        (payload.target_id, payload.source_id),
+    )
+    cursor.execute(
+        "UPDATE speaker_samples SET speaker_id = ? WHERE speaker_id = ?",
+        (payload.target_id, payload.source_id),
+    )
+    cursor.execute(
+        """
+        DELETE FROM speaker_samples
+        WHERE rowid NOT IN (
+            SELECT MIN(rowid)
+            FROM speaker_samples
+            GROUP BY speaker_id, segment_id
+        )
+        """
+    )
+    cursor.execute(
+        "SELECT label FROM speakers WHERE id = ?",
+        (payload.target_id,),
+    )
+    target_row = cursor.fetchone()
+    if target_row and not target_row[0]:
+        cursor.execute(
+            "SELECT label FROM speakers WHERE id = ?",
+            (payload.source_id,),
+        )
+        source_row = cursor.fetchone()
+        if source_row and source_row[0]:
+            cursor.execute(
+                "UPDATE speakers SET label = ? WHERE id = ?",
+                (source_row[0], payload.target_id),
+            )
+    cursor.execute("DELETE FROM speakers WHERE id = ?", (payload.source_id,))
     conn.commit()
     conn.close()
     return {"status": "ok"}

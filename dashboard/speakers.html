@@ -28,10 +28,19 @@
             samples += `<audio controls src="/segments/${s.file}"></audio>`;
           }
         });
+        const options = speakers
+          .filter(s => s.id !== sp.id)
+          .map(s => `<option value="${s.id}">${s.id}${s.label ? ' - ' + s.label : ''}</option>`)
+          .join('');
         div.innerHTML = `
           <h3>${sp.id}</h3>
           <input id="name-${sp.id}" value="${sp.label || ''}" placeholder="Name" />
           <button onclick="save('${sp.id}')">💾 Save</button>
+          <select id="merge-${sp.id}">
+            <option value="">-- Merge Into --</option>
+            ${options}
+          </select>
+          <button onclick="merge('${sp.id}')">🔀 Merge</button>
           <div>${samples}</div>
         `;
         container.appendChild(div);
@@ -46,6 +55,21 @@
         body: JSON.stringify({ label })
       });
       alert('✅ Saved');
+    }
+
+    async function merge(source) {
+      const target = document.getElementById('merge-' + source).value;
+      if (!target) {
+        alert('Select a target speaker');
+        return;
+      }
+      await fetch('/api/speakers/merge', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ source_id: source, target_id: target })
+      });
+      alert('🔀 Merged');
+      loadSpeakers();
     }
 
     loadSpeakers();
