@@ -1,0 +1,41 @@
+import os
+import time
+import sqlite3
+from pathlib import Path
+from dotenv import load_dotenv
+
+load_dotenv()
+
+AUDIO_DIR = os.getenv("AUDIO")
+DB_PATH = os.getenv("TRANSCRIPTS_DB")
+POLL_INTERVAL = 60  # seconds
+
+def scan_for_new_files():
+    if not AUDIO_DIR or not DB_PATH:
+        raise RuntimeError("AUDIO and TRANSCRIPTS_DB must be set in the environment")
+
+    audio_dir = Path(AUDIO_DIR)
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+
+    print(f"📡 Monitoring '{audio_dir}' for new audio files...")
+    try:
+        while True:
+            for path in audio_dir.rglob("*.m4a"):
+                cursor.execute("SELECT 1 FROM jobs WHERE file_path = ?", (str(path),))
+                if cursor.fetchone():
+                    continue
+
+                cursor.execute(
+                    "INSERT INTO jobs (file_path, status) VALUES (?, 'pending')",
+                    (str(path),),
+                )
+                conn.commit()
+                print(f"📥 Queued job for: {path}")
+
+            time.sleep(POLL_INTERVAL)
+    finally:
+        conn.close()
+
+if __name__ == "__main__":
+    scan_for_new_files()

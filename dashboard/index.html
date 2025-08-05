@@ -66,6 +66,19 @@
     <tbody></tbody>
   </table>
 
+  <h2>Job Queue</h2>
+  <table id="jobs-table">
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>File</th>
+        <th>Status</th>
+        <th>Created</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
   <div id="segments" style="margin-top: 2rem; display: none;">
     <button onclick="toggleSegments(false)">🔙 Back to list</button>
     <div id="segment-list"></div>
@@ -140,7 +153,25 @@
       audio.play();
     }
 
+    async function loadJobs() {
+      const res = await fetch('/api/jobs');
+      const jobs = await res.json();
+      const tbody = document.querySelector('#jobs-table tbody');
+
+      jobs.forEach(job => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td>${job.id}</td>
+          <td>${job.file_path}</td>
+          <td>${job.status}</td>
+          <td>${job.created_at || ''}</td>
+        `;
+        tbody.appendChild(row);
+      });
+    }
+
     loadRecordings();
+    loadJobs();
   </script>
 </body>
 </html>
