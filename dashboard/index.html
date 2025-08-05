@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Transcription Dashboard</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      margin: 2rem;
+    }
+
+    table {
+      border-collapse: collapse;
+      width: 100%;
+      margin-top: 1rem;
+    }
+
+    th, td {
+      border: 1px solid #ccc;
+      padding: 0.5rem;
+      text-align: left;
+    }
+
+    tr:hover {
+      background: #f5f5f5;
+    }
+
+    .segment {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.75rem;
+      border-left: 4px solid #666;
+      background: #f9f9f9;
+      margin: 0.5rem 0;
+    }
+
+    .segment .left {
+      flex: 1;
+    }
+
+    .segment .right {
+      white-space: nowrap;
+      margin-left: 1rem;
+      font-size: 0.9rem;
+      color: #555;
+    }
+
+    button {
+      margin: 1rem 0;
+    }
+  </style>
+</head>
+<body>
+  <h1>🎙️ Transcription Dashboard</h1>
+
+  <table id="recordings-table">
+    <thead>
+      <tr>
+        <th>Datetime</th>
+        <th>Filename</th>
+        <th>Duration</th>
+        <th>Segments</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
+  <div id="segments" style="margin-top: 2rem; display: none;">
+    <button onclick="toggleSegments(false)">🔙 Back to list</button>
+    <div id="segment-list"></div>
+  </div>
+
+  <script>
+    async function loadRecordings() {
+      const res = await fetch('/api/recordings');
+      const recordings = await res.json();
+      const tbody = document.querySelector("#recordings-table tbody");
+
+      recordings.forEach(rec => {
+        const row = document.createElement("tr");
+        row.innerHTML = `
+          <td>${rec.datetime}</td>
+          <td>${rec.filename}</td>
+          <td>${(rec.duration_sec / 60).toFixed(1)} min</td>
+          <td>
+            <a href="#" onclick="showSegments(${rec.id}, '${rec.filename}'); return false;">
+              ${rec.segment_count}
+            </a> |
+            <a href="#" onclick="confirmDelete(${rec.id}); return false;" style="color:red;">🗑</a>
+          </td>
+        `;
+        tbody.appendChild(row);
+      });
+    }
+
+    async function showSegments(recordingId, filename) {
+      const res = await fetch(`/api/segments/${recordingId}`);
+      const segments = await res.json();
+      const container = document.getElementById("segment-list");
+      const wrapper = document.getElementById("segments");
+      container.innerHTML = `<h2>🎧 Segments for ${filename} (${segments.length})</h2>`;
+
+      segments.forEach(seg => {
+        const div = document.createElement("div");
+        div.className = "segment";
+        div.innerHTML = `
+          <div class="left">
+            <strong>[${seg.speaker_id || "Unknown"}]</strong> ${seg.transcript}
+          </div>
+          <div class="right">
+            ${seg.start_time.toFixed(1)}–${seg.end_time.toFixed(1)}s
+            ${seg.embedding_path ? ` <a href="#" onclick="playSegment('/segments/${seg.embedding_path.split('/').pop()}'); return false;" title="Play clip">🔊</a>` : ''}
+          </div>
+        `;
+        container.appendChild(div);
+      });
+
+      wrapper.style.display = "block";
+      window.scrollTo(0, document.body.scrollHeight);
+    }
+
+    function toggleSegments(show) {
+      document.getElementById("segments").style.display = show ? "block" : "none";
+    }
+
+    async function confirmDelete(id) {
+      if (!confirm("❌ This will remove the recording and all associated segments.\nAre you sure?")) return;
+      const res = await fetch(`/api/recordings/${id}`, { method: "DELETE" });
+      if (res.ok) {
+        alert("✅ Deleted");
+        location.reload();
+      } else {
+        alert("❌ Failed to delete");
+      }
+    }
+
+    function playSegment(url) {
+      const audio = new Audio(url);
+      audio.play();
+    }
+
+    loadRecordings();
+  </script>
+</body>
+</html>
