@@ -33,18 +33,21 @@ def index():
 
 
 @app.get("/jobs")
+@app.get("/jobs.html")
 def jobs_page():
     """Serve the jobs dashboard page."""
     return FileResponse(DASHBOARD_DIR / "jobs.html")
 
 
 @app.get("/speakers")
+@app.get("/speakers.html")
 def speakers_page():
     """Serve the speakers dashboard page."""
     return FileResponse(DASHBOARD_DIR / "speakers.html")
 
 
 @app.get("/transcripts")
+@app.get("/transcripts.html")
 def transcripts_page():
     """Serve the transcripts dashboard page."""
     return FileResponse(DASHBOARD_DIR / "transcripts.html")
