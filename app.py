@@ -28,6 +28,8 @@ app.mount("/segments", StaticFiles(directory=AUDIO_SEGMENTS_DIR), name="segments
 
 
 @app.get("/")
+@app.get("/index")
+@app.get("/index.html")
 def index():
     return FileResponse(DASHBOARD_DIR / "index.html")
 
@@ -51,6 +53,13 @@ def speakers_page():
 def transcripts_page():
     """Serve the transcripts dashboard page."""
     return FileResponse(DASHBOARD_DIR / "transcripts.html")
+
+
+@app.get("/transcript")
+@app.get("/transcript.html")
+def transcript_page():
+    """Serve the transcript detail page."""
+    return FileResponse(DASHBOARD_DIR / "transcript.html")
 
 
 @app.get("/api/recordings")
