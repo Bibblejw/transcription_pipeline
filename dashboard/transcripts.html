@@ -13,9 +13,11 @@
 <body>
   <h1>📼 Recordings</h1>
   <p><a href="/dashboard/index.html">⬅️ Back</a></p>
+  <button id="identify-selected">🗣 Identify Selected</button>
   <table id="recordings-table">
     <thead>
       <tr>
+        <th><input type="checkbox" id="select-all"></th>
         <th>Datetime</th>
         <th>Filename</th>
         <th>Duration</th>
@@ -26,6 +28,10 @@
     <tbody></tbody>
   </table>
   <script>
+    function getSelected() {
+      return Array.from(document.querySelectorAll('#recordings-table tbody input[type=checkbox]:checked')).map(cb => parseInt(cb.value));
+    }
+
     async function loadRecordings() {
       const res = await fetch('/api/recordings');
       const recs = await res.json();
@@ -34,6 +40,7 @@
       recs.forEach(rec => {
         const row = document.createElement('tr');
         row.innerHTML = `
+          <td><input type="checkbox" value="${rec.id}"></td>
           <td>${rec.datetime}</td>
           <td>${rec.filename}</td>
           <td>${(rec.duration_sec/60).toFixed(1)} min</td>
@@ -58,6 +65,25 @@
       }
     }
 
+    document.getElementById('identify-selected').addEventListener('click', async () => {
+      const ids = getSelected();
+      if (!ids.length) {
+        alert('No recordings selected');
+        return;
+      }
+      const res = await fetch('/api/recordings/identify_batch', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ recording_ids: ids }),
+      });
+      if (res.ok) {
+        alert('🔍 Batch identification started');
+      } else {
+        const data = await res.json().catch(()=>({}));
+        alert(`❌ Failed: ${data.detail || res.status}`);
+      }
+    });
+
     async function del(id) {
       if (!confirm('Delete recording?')) return;
       const res = await fetch(`/api/recordings/${id}`, {method:'DELETE'});
@@ -67,6 +93,10 @@
         alert('❌ Failed to delete');
       }
     }
+
+    document.getElementById('select-all').addEventListener('change', e => {
+      document.querySelectorAll('#recordings-table tbody input[type=checkbox]').forEach(cb => cb.checked = e.target.checked);
+    });
 
     loadRecordings();
   </script>

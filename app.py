@@ -209,6 +209,17 @@ def identify_recording(recording_id: int, background_tasks: BackgroundTasks):
     return {"status": "started"}
 
 
+class RecordingBatch(BaseModel):
+    recording_ids: list[int]
+
+
+@app.post("/api/recordings/identify_batch")
+def identify_recordings_batch(batch: RecordingBatch, background_tasks: BackgroundTasks):
+    for rid in batch.recording_ids:
+        background_tasks.add_task(run_speaker_identification, rid)
+    return {"status": "started", "count": len(batch.recording_ids)}
+
+
 class SpeakerUpdate(BaseModel):
     label: str
 

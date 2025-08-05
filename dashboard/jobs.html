@@ -13,9 +13,11 @@
 <body>
   <h1>🧾 Job Queue</h1>
   <p><a href="/dashboard/index.html">⬅️ Back</a></p>
+  <button id="process-selected">▶️ Process Selected</button>
   <table id="jobs-table">
     <thead>
       <tr>
+        <th><input type="checkbox" id="select-all"></th>
         <th>ID</th>
         <th>File</th>
         <th>Status</th>
@@ -27,6 +29,10 @@
   </table>
 
   <script>
+    function getSelected() {
+      return Array.from(document.querySelectorAll('#jobs-table tbody input[type=checkbox]:checked')).map(cb => parseInt(cb.value));
+    }
+
     async function loadJobs() {
       const res = await fetch('/api/jobs');
       const jobs = await res.json();
@@ -35,6 +41,7 @@
       jobs.forEach(job => {
         const row = document.createElement('tr');
         row.innerHTML = `
+          <td><input type="checkbox" value="${job.id}"></td>
           <td>${job.id}</td>
           <td>${job.file_path}</td>
           <td>${job.status}</td>
@@ -55,6 +62,30 @@
       }
       await loadJobs();
     }
+
+    document.getElementById('process-selected').addEventListener('click', async () => {
+      const ids = getSelected();
+      if (!ids.length) {
+        alert('No jobs selected');
+        return;
+      }
+      const res = await fetch('/api/jobs/batch', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ job_ids: ids }),
+      });
+      if (res.ok) {
+        alert('✅ Batch processing started');
+      } else {
+        const data = await res.json().catch(() => ({}));
+        alert(`❌ Failed: ${data.detail || res.status}`);
+      }
+      await loadJobs();
+    });
+
+    document.getElementById('select-all').addEventListener('change', e => {
+      document.querySelectorAll('#jobs-table tbody input[type=checkbox]').forEach(cb => cb.checked = e.target.checked);
+    });
 
     loadJobs();
   </script>
