@@ -18,8 +18,15 @@ SEGMENT_DIR.mkdir(parents=True, exist_ok=True)
 model = whisper.load_model("base")  # or "medium", "small", etc.
 
 def transcribe_and_split(audio_path: Path):
+    """Transcribe ``audio_path`` and split it into segments.
+
+    Returns the ``recording_id`` of the newly inserted row in the
+    ``recordings`` table.  ``None`` is returned if the file was skipped or an
+    error occurred.
+    """
     conn = sqlite3.connect(TRANSCRIPTS_DB)
     cursor = conn.cursor()
+    recording_id = None
     try:
         # Extract standard datetime ID from filename
         parts = audio_path.relative_to(AUDIO_DIR).parts
@@ -31,7 +38,7 @@ def transcribe_and_split(audio_path: Path):
         cursor.execute("SELECT 1 FROM recordings WHERE datetime = ?", (transcript_id,))
         if cursor.fetchone():
             print(f"⏩ Already processed: {transcript_id}")
-            return
+            return None
 
         print(f"🎙️ Transcribing: {audio_path}")
         audio = AudioSegment.from_file(audio_path)
@@ -68,9 +75,11 @@ def transcribe_and_split(audio_path: Path):
 
         conn.commit()
         print(f"✅ Completed: {transcript_id}")
+        return recording_id
 
     except Exception as e:
         print(f"❌ Failed to process {audio_path.name}: {e}")
+        return None
     finally:
         conn.close()
 

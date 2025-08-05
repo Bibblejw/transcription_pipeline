@@ -94,27 +94,60 @@ def get_jobs():
 
 @app.post("/api/jobs/{job_id}/process")
 def process_job(job_id: int):
+    """Process a single job by ID."""
+    try:
+        result = _process_job(job_id)
+    except ValueError:
+        raise HTTPException(status_code=404, detail="Job not found")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    return {"status": "completed", "recording_id": result.get("recording_id")}
+
+
+class JobBatch(BaseModel):
+    job_ids: list[int]
+
+
+def _process_job(job_id: int):
     from transcribe_and_split import transcribe_and_split
 
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
     row = cursor.execute("SELECT file_path FROM jobs WHERE id = ?", (job_id,)).fetchone()
     if not row:
-        raise HTTPException(status_code=404, detail="Job not found")
+        conn.close()
+        raise ValueError("Job not found")
     file_path = row[0]
     try:
         cursor.execute("UPDATE jobs SET status = 'processing' WHERE id = ?", (job_id,))
         conn.commit()
-        transcribe_and_split(Path(file_path))
+        recording_id = transcribe_and_split(Path(file_path))
+        if recording_id is not None:
+            run_speaker_identification(recording_id)
         cursor.execute("UPDATE jobs SET status = 'completed' WHERE id = ?", (job_id,))
         conn.commit()
+        return {"job_id": job_id, "recording_id": recording_id}
     except Exception as e:
         cursor.execute("UPDATE jobs SET status = 'error' WHERE id = ?", (job_id,))
         conn.commit()
-        raise HTTPException(status_code=500, detail=str(e))
+        raise e
     finally:
         conn.close()
-    return {"status": "completed"}
+
+
+@app.post("/api/jobs/batch")
+def process_jobs_batch(batch: JobBatch):
+    """Process multiple jobs in sequence."""
+    processed = []
+    errors = []
+    for job_id in batch.job_ids:
+        try:
+            processed.append(_process_job(job_id))
+        except ValueError:
+            errors.append({"job_id": job_id, "error": "not found"})
+        except Exception as e:
+            errors.append({"job_id": job_id, "error": str(e)})
+    return {"processed": processed, "errors": errors}
             
 @app.get("/api/segments/{recording_id}")
 def get_segments(recording_id: int):
