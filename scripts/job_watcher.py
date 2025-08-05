@@ -35,17 +35,6 @@ def scan_for_new_files():
                     continue
 
                 # Skip files already queued as jobs
-    if not AUDIO_DIR or not DB_PATH:
-        raise RuntimeError("AUDIO and TRANSCRIPTS_DB must be set in the environment")
-
-    audio_dir = Path(AUDIO_DIR)
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
-
-    print(f"📡 Monitoring '{audio_dir}' for new audio files...")
-    try:
-        while True:
-            for path in audio_dir.rglob("*.m4a"):
                 cursor.execute("SELECT 1 FROM jobs WHERE file_path = ?", (str(path),))
                 if cursor.fetchone():
                     continue
