@@ -74,6 +74,8 @@
         <th>File</th>
         <th>Status</th>
         <th>Created</th>
+        <th>Actions</th>
+
       </tr>
     </thead>
     <tbody></tbody>
@@ -89,6 +91,7 @@
       const res = await fetch('/api/recordings');
       const recordings = await res.json();
       const tbody = document.querySelector("#recordings-table tbody");
+      tbody.innerHTML = '';
 
       recordings.forEach(rec => {
         const row = document.createElement("tr");
@@ -157,6 +160,7 @@
       const res = await fetch('/api/jobs');
       const jobs = await res.json();
       const tbody = document.querySelector('#jobs-table tbody');
+      tbody.innerHTML = '';
 
       jobs.forEach(job => {
         const row = document.createElement('tr');
@@ -165,9 +169,22 @@
           <td>${job.file_path}</td>
           <td>${job.status}</td>
           <td>${job.created_at || ''}</td>
+          <td><button onclick="processJob(${job.id})">▶️ Start</button></td>
         `;
         tbody.appendChild(row);
       });
+    }
+
+    async function processJob(id) {
+      const res = await fetch(`/api/jobs/${id}/process`, { method: 'POST' });
+      if (res.ok) {
+        alert('✅ Job processed');
+      } else {
+        const data = await res.json().catch(() => ({}));
+        alert(`❌ Failed: ${data.detail || res.status}`);
+      }
+      await loadRecordings();
+      await loadJobs();
     }
 
     loadRecordings();

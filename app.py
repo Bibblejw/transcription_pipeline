@@ -4,6 +4,9 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 import sqlite3
 from pathlib import Path
+import sys
+
+sys.path.append(str(Path(__file__).parent / "scripts"))
 
 app = FastAPI()
 app.add_middleware(CORSMiddleware, allow_origins=["*"])
@@ -52,6 +55,30 @@ def get_jobs():
     return [dict(row) for row in rows]
 
 
+@app.post("/api/jobs/{job_id}/process")
+def process_job(job_id: int):
+    from transcribe_and_split import transcribe_and_split
+
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    row = cursor.execute("SELECT file_path FROM jobs WHERE id = ?", (job_id,)).fetchone()
+    if not row:
+        raise HTTPException(status_code=404, detail="Job not found")
+    file_path = row[0]
+    try:
+        cursor.execute("UPDATE jobs SET status = 'processing' WHERE id = ?", (job_id,))
+        conn.commit()
+        transcribe_and_split(Path(file_path))
+        cursor.execute("UPDATE jobs SET status = 'completed' WHERE id = ?", (job_id,))
+        conn.commit()
+    except Exception as e:
+        cursor.execute("UPDATE jobs SET status = 'error' WHERE id = ?", (job_id,))
+        conn.commit()
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        conn.close()
+    return {"status": "completed}
+            
 @app.get("/api/segments/{recording_id}")
 def get_segments(recording_id: int):
     conn = sqlite3.connect(DB_PATH)
