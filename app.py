@@ -1,10 +1,12 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, BackgroundTasks
+from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 import sqlite3
 from pathlib import Path
 import sys
+import subprocess
 
 sys.path.append(str(Path(__file__).parent / "scripts"))
 
@@ -77,7 +79,7 @@ def process_job(job_id: int):
         raise HTTPException(status_code=500, detail=str(e))
     finally:
         conn.close()
-    return {"status": "completed}
+    return {"status": "completed"}
             
 @app.get("/api/segments/{recording_id}")
 def get_segments(recording_id: int):
@@ -120,3 +122,76 @@ def delete_recording(recording_id: int):
     conn.close()
 
     return {"status": "deleted", "id": recording_id}
+
+
+def run_speaker_identification(recording_id: int):
+    """Invoke the speaker identification script for a given recording."""
+    script = Path(__file__).parent / "scripts" / "speaker_identification.py"
+    try:
+        subprocess.run([sys.executable, str(script), str(recording_id)], check=True)
+    except subprocess.CalledProcessError as exc:
+        print(f"⚠️ Speaker identification failed: {exc}")
+
+
+@app.post("/api/recordings/{recording_id}/identify")
+def identify_recording(recording_id: int, background_tasks: BackgroundTasks):
+    background_tasks.add_task(run_speaker_identification, recording_id)
+    return {"status": "started"}
+
+
+class SpeakerUpdate(BaseModel):
+    label: str
+
+
+@app.get("/api/speakers")
+def get_speakers():
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+    cursor.execute(
+        """
+        CREATE TABLE IF NOT EXISTS speaker_samples (
+            speaker_id TEXT,
+            segment_id INTEGER,
+            FOREIGN KEY (speaker_id) REFERENCES speakers(id),
+            FOREIGN KEY (segment_id) REFERENCES segments(id)
+        )
+        """
+    )
+    rows = cursor.execute("SELECT id, label FROM speakers ORDER BY id").fetchall()
+    speakers = []
+    for row in rows:
+        samples = cursor.execute(
+            """
+            SELECT s.id, s.embedding_path
+            FROM speaker_samples sp
+            JOIN segments s ON s.id = sp.segment_id
+            WHERE sp.speaker_id = ?
+            ORDER BY sp.rowid DESC
+            """,
+            (row["id"],),
+        ).fetchall()
+        speakers.append(
+            {
+                "id": row["id"],
+                "label": row["label"],
+                "samples": [
+                    {"id": s[0], "file": Path(s[1]).name if s[1] else None}
+                    for s in samples
+                ],
+            }
+        )
+    conn.close()
+    return speakers
+
+
+@app.post("/api/speakers/{speaker_id}")
+def update_speaker(speaker_id: str, payload: SpeakerUpdate):
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute(
+        "UPDATE speakers SET label = ? WHERE id = ?", (payload.label, speaker_id)
+    )
+    conn.commit()
+    conn.close()
+    return {"status": "ok"}

@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Transcript</title>
+  <style>
+    body { font-family: sans-serif; margin: 2rem; }
+    .segment { display: flex; justify-content: space-between; align-items: center; padding: 0.75rem; border-left: 4px solid #666; background: #f9f9f9; margin: 0.5rem 0; }
+    .segment .left { flex: 1; }
+    .segment .right { white-space: nowrap; margin-left: 1rem; font-size: 0.9rem; color: #555; }
+  </style>
+</head>
+<body>
+  <h1>📝 Transcript</h1>
+  <p><a href="/dashboard/transcripts.html">⬅️ Back to recordings</a></p>
+  <div id="segments"></div>
+  <script>
+    function getId() {
+      const params = new URLSearchParams(location.search);
+      return params.get('id');
+    }
+
+    async function loadSegments() {
+      const id = getId();
+      const res = await fetch(`/api/segments/${id}`);
+      const segs = await res.json();
+      const container = document.getElementById('segments');
+      container.innerHTML = '';
+      segs.forEach(seg => {
+        const div = document.createElement('div');
+        div.className = 'segment';
+        div.innerHTML = `
+          <div class="left"><strong>[${seg.speaker_id || 'Unknown'}]</strong> ${seg.transcript}</div>
+          <div class="right">${seg.start_time.toFixed(1)}–${seg.end_time.toFixed(1)}s ${seg.embedding_path ? `<a href="#" onclick="play('/segments/${seg.embedding_path.split('/').pop()}');return false;" title="Play">🔊</a>` : ''}</div>
+        `;
+        container.appendChild(div);
+      });
+    }
+
+    function play(url) { new Audio(url).play(); }
+
+    loadSegments();
+  </script>
+</body>
+</html>
