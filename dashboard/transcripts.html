@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Transcripts</title>
+  <style>
+    body { font-family: sans-serif; margin: 2rem; }
+    table { border-collapse: collapse; width: 100%; margin-top: 1rem; }
+    th, td { border: 1px solid #ccc; padding: 0.5rem; text-align: left; }
+    tr:hover { background: #f5f5f5; }
+  </style>
+</head>
+<body>
+  <h1>📼 Recordings</h1>
+  <p><a href="/dashboard/index.html">⬅️ Back</a></p>
+  <table id="recordings-table">
+    <thead>
+      <tr>
+        <th>Datetime</th>
+        <th>Filename</th>
+        <th>Duration</th>
+        <th>Segments</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+  <script>
+    async function loadRecordings() {
+      const res = await fetch('/api/recordings');
+      const recs = await res.json();
+      const tbody = document.querySelector('#recordings-table tbody');
+      tbody.innerHTML = '';
+      recs.forEach(rec => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td>${rec.datetime}</td>
+          <td>${rec.filename}</td>
+          <td>${(rec.duration_sec/60).toFixed(1)} min</td>
+          <td>${rec.segment_count}</td>
+          <td>
+            <a href="/dashboard/transcript.html?id=${rec.id}">📄 View</a>
+            <button onclick="identify(${rec.id})">🗣</button>
+            <a href="#" onclick="del(${rec.id});return false;" style="color:red;">🗑</a>
+          </td>
+        `;
+        tbody.appendChild(row);
+      });
+    }
+
+    async function identify(id) {
+      const res = await fetch(`/api/recordings/${id}/identify`, {method:'POST'});
+      if (res.ok) {
+        alert('🔍 Speaker identification started');
+      } else {
+        const data = await res.json().catch(()=>({}));
+        alert(`❌ Failed: ${data.detail || res.status}`);
+      }
+    }
+
+    async function del(id) {
+      if (!confirm('Delete recording?')) return;
+      const res = await fetch(`/api/recordings/${id}`, {method:'DELETE'});
+      if (res.ok) {
+        loadRecordings();
+      } else {
+        alert('❌ Failed to delete');
+      }
+    }
+
+    loadRecordings();
+  </script>
+</body>
+</html>
