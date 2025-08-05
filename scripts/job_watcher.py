@@ -19,6 +19,19 @@ def scan_for_new_files():
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
 
+    # Ensure the jobs table exists so lookups/inserts don't fail
+    cursor.execute(
+        """
+        CREATE TABLE IF NOT EXISTS jobs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            file_path TEXT UNIQUE NOT NULL,
+            status TEXT DEFAULT 'pending',
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP
+        )
+        """
+    )
+    conn.commit()
+
     def iter_audio_files():
         for dirpath, _, filenames in os.walk(root_dir):
             for name in filenames:
