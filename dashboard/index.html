@@ -66,6 +66,20 @@
     <tbody></tbody>
   </table>
 
+  <h2>Job Queue</h2>
+  <table id="jobs-table">
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>File</th>
+        <th>Status</th>
+        <th>Created</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
   <div id="segments" style="margin-top: 2rem; display: none;">
     <button onclick="toggleSegments(false)">🔙 Back to list</button>
     <div id="segment-list"></div>
@@ -76,6 +90,7 @@
       const res = await fetch('/api/recordings');
       const recordings = await res.json();
       const tbody = document.querySelector("#recordings-table tbody");
+      tbody.innerHTML = '';
 
       recordings.forEach(rec => {
         const row = document.createElement("tr");
@@ -140,7 +155,39 @@
       audio.play();
     }
 
+    async function loadJobs() {
+      const res = await fetch('/api/jobs');
+      const jobs = await res.json();
+      const tbody = document.querySelector('#jobs-table tbody');
+      tbody.innerHTML = '';
+
+      jobs.forEach(job => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td>${job.id}</td>
+          <td>${job.file_path}</td>
+          <td>${job.status}</td>
+          <td>${job.created_at || ''}</td>
+          <td><button onclick="processJob(${job.id})">▶️ Start</button></td>
+        `;
+        tbody.appendChild(row);
+      });
+    }
+
+    async function processJob(id) {
+      const res = await fetch(`/api/jobs/${id}/process`, { method: 'POST' });
+      if (res.ok) {
+        alert('✅ Job processed');
+      } else {
+        const data = await res.json().catch(() => ({}));
+        alert(`❌ Failed: ${data.detail || res.status}`);
+      }
+      await loadRecordings();
+      await loadJobs();
+    }
+
     loadRecordings();
+    loadJobs();
   </script>
 </body>
 </html>
