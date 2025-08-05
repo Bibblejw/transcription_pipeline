@@ -17,11 +17,9 @@ SEGMENT_DIR.mkdir(parents=True, exist_ok=True)
 # === Load Whisper model ===
 model = whisper.load_model("base")  # or "medium", "small", etc.
 
-# === Connect to database ===
-conn = sqlite3.connect(TRANSCRIPTS_DB)
-cursor = conn.cursor()
-
 def transcribe_and_split(audio_path: Path):
+    conn = sqlite3.connect(TRANSCRIPTS_DB)
+    cursor = conn.cursor()
     try:
         # Extract standard datetime ID from filename
         parts = audio_path.relative_to(AUDIO_DIR).parts
@@ -73,6 +71,8 @@ def transcribe_and_split(audio_path: Path):
 
     except Exception as e:
         print(f"❌ Failed to process {audio_path.name}: {e}")
+    finally:
+        conn.close()
 
 def main():
     audio_files = list(AUDIO_DIR.rglob("*.m4a"))
@@ -80,8 +80,6 @@ def main():
 
     for audio_file in audio_files:
         transcribe_and_split(audio_file)
-
-    conn.close()
 
 if __name__ == "__main__":
     main()
