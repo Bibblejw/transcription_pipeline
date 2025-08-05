@@ -61,6 +61,7 @@
         <th>Filename</th>
         <th>Duration</th>
         <th>Segments</th>
+        <th>Actions</th>
       </tr>
     </thead>
     <tbody></tbody>
@@ -102,7 +103,10 @@
           <td>
             <a href="#" onclick="showSegments(${rec.id}, '${rec.filename}'); return false;">
               ${rec.segment_count}
-            </a> |
+            </a>
+          </td>
+          <td>
+            <button onclick="identifySpeakers(${rec.id})">🗣 Identify</button>
             <a href="#" onclick="confirmDelete(${rec.id}); return false;" style="color:red;">🗑</a>
           </td>
         `;
@@ -154,6 +158,16 @@
     function playSegment(url) {
       const audio = new Audio(url);
       audio.play();
+    }
+
+    async function identifySpeakers(id) {
+      const res = await fetch(`/api/recordings/${id}/identify`, { method: 'POST' });
+      if (res.ok) {
+        alert('🔍 Speaker identification started');
+      } else {
+        const data = await res.json().catch(() => ({}));
+        alert(`❌ Failed: ${data.detail || res.status}`);
+      }
     }
 
     async function loadJobs() {
