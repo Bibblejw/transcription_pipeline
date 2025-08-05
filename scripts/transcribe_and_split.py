@@ -9,7 +9,7 @@ import whisper
 load_dotenv()
 
 AUDIO_DIR = Path(os.getenv("AUDIO"))
-SEGMENT_DIR = Path(os.getenv("AUDIO_SEGMENTS"))
+SEGMENT_DIR = Path(os.getenv("AUDIO_SEGMENTS", "/mnt/audio/audio_segments")).resolve()
 TRANSCRIPTS_DB = Path(os.getenv("TRANSCRIPTS_DB"))
 
 SEGMENT_DIR.mkdir(parents=True, exist_ok=True)

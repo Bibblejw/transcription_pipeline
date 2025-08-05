@@ -7,14 +7,18 @@ import sqlite3
 from pathlib import Path
 import sys
 import subprocess
+import os
+from dotenv import load_dotenv
 
 sys.path.append(str(Path(__file__).parent / "scripts"))
+
+load_dotenv()
 
 app = FastAPI()
 app.add_middleware(CORSMiddleware, allow_origins=["*"])
 
 DB_PATH = Path(__file__).parent / "transcripts.db"
-AUDIO_SEGMENTS_DIR = "/mnt/audio/audio_segments"
+AUDIO_SEGMENTS_DIR = Path(os.getenv("AUDIO_SEGMENTS", "/mnt/audio/audio_segments"))
 DASHBOARD_DIR = Path(__file__).parent / "dashboard"
 
 # Static mounts

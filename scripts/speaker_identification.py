@@ -1,11 +1,16 @@
 import sqlite3
 import sys
 from pathlib import Path
+import os
 
 import numpy as np
 from resemblyzer import VoiceEncoder, preprocess_wav
+from dotenv import load_dotenv
+
+load_dotenv()
 
 DB_PATH = Path(__file__).resolve().parent.parent / "transcripts.db"
+AUDIO_SEGMENTS_DIR = Path(os.getenv("AUDIO_SEGMENTS", "/mnt/audio/audio_segments"))
 
 
 def _kmeans(data: np.ndarray, k: int = 2, iterations: int = 20):
@@ -53,12 +58,15 @@ def main(recording_id: int):
     embeddings = []
     for seg_id, path in rows:
         try:
-            wav = preprocess_wav(path)
+            segment_path = Path(path)
+            if not segment_path.is_absolute():
+                segment_path = AUDIO_SEGMENTS_DIR / segment_path.name
+            wav = preprocess_wav(str(segment_path))
             emb = encoder.embed_utterance(wav)
-            seg_info.append((seg_id, path, emb))
+            seg_info.append((seg_id, str(segment_path), emb))
             embeddings.append(emb)
         except Exception as e:
-            print(f"⚠️ Failed to process {path}: {e}")
+            print(f"⚠️ Failed to process {segment_path}: {e}")
     embeddings = np.array(embeddings)
     if len(embeddings) == 0:
         return
