@@ -11,5 +11,7 @@ transcription_pipeline/transcripts.db
 *.mp3
 *.log
 *.bak
+*.db
 .env
+.venv/
 __pycache__/
