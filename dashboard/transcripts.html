@@ -42,6 +42,8 @@
             <a href="/dashboard/transcript.html?id=${rec.id}">📄 View</a>
             <button onclick="exportTranscript(${rec.id})">💾</button>
             <button onclick="identify(${rec.id})">🗣</button>
+            <button onclick="summarize(${rec.id})">📝 Summarize</button>
+            ${rec.has_summary ? `<a href="/dashboard/summary.html?id=${rec.id}">📖 View summary</a>` : ''}
             <a href="#" onclick="del(${rec.id});return false;" style="color:red;">🗑</a>
           </td>
         `;
@@ -56,6 +58,16 @@
       } else {
         const data = await res.json().catch(()=>({}));
         alert(`❌ Failed: ${data.detail || res.status}`);
+      }
+    }
+
+    async function summarize(id) {
+      const res = await fetch(`/api/recordings/${id}/summarize`, { method: 'POST' });
+      if (res.ok) {
+        alert('✅ Summary saved');
+      } else {
+        const err = await res.json().catch(() => ({}));
+        alert(`❌ Failed: ${err.detail || res.status}`);
       }
     }
 

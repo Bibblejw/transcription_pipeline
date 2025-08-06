@@ -19,6 +19,9 @@ setup_logging()
 builtins.print = lambda *args, **kwargs: logging.getLogger(__name__).info(" ".join(str(a) for a in args), **kwargs)
 load_dotenv()
 
+# Summarization utilities
+from Summarise import split_text_into_chunks, summarise_chunk, MAX_CHUNKS
+
 app = FastAPI()
 app.add_middleware(CORSMiddleware, allow_origins=["*"])
 
@@ -71,10 +74,25 @@ def get_recordings():
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
+    # Ensure summaries table exists for summary availability flag
+    cursor.execute(
+        """
+        CREATE TABLE IF NOT EXISTS summaries (
+            recording_id INTEGER PRIMARY KEY,
+            summary TEXT NOT NULL
+        )
+        """
+    )
 
     query = """
-    SELECT r.id, r.filename, r.datetime, r.duration_sec,
-           COUNT(s.id) AS segment_count
+    SELECT r.id,
+           r.filename,
+           r.datetime,
+           r.duration_sec,
+           COUNT(s.id) AS segment_count,
+           CASE WHEN EXISTS(
+             SELECT 1 FROM summaries su WHERE su.recording_id = r.id
+           ) THEN 1 ELSE 0 END AS has_summary
     FROM recordings r
     LEFT JOIN segments s ON s.recording_id = r.id
     GROUP BY r.id
@@ -82,6 +100,73 @@ def get_recordings():
     """
     rows = cursor.execute(query).fetchall()
     return [dict(row) for row in rows]
+
+
+@app.post("/api/recordings/{recording_id}/summarize")
+def summarize_recording(recording_id: int):
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+
+    # Ensure summaries table exists
+    cursor.execute(
+        """
+        CREATE TABLE IF NOT EXISTS summaries (
+            recording_id INTEGER PRIMARY KEY,
+            summary TEXT NOT NULL
+        )
+        """
+    )
+    rows = cursor.execute(
+        """
+        SELECT s.start_time, sp.label AS speaker_label, s.transcript
+        FROM segments s
+        LEFT JOIN speakers sp ON sp.id = s.speaker_id
+        WHERE s.recording_id = ?
+        ORDER BY s.start_time ASC
+        """,
+        (recording_id,),
+    ).fetchall()
+    if not rows:
+        conn.close()
+        raise HTTPException(status_code=404, detail="Recording not found or no segments")
+
+    text = "\n".join(
+        f"[{row['speaker_label'] or ''}] {row['transcript']}" for row in rows
+    )
+    chunks = split_text_into_chunks(text)
+    summaries = [summarise_chunk(chunk) for chunk in chunks[:MAX_CHUNKS]]
+    full_summary = "\n\n---\n\n".join(summaries)
+
+    cursor.execute(
+        "REPLACE INTO summaries (recording_id, summary) VALUES (?, ?)",
+        (recording_id, full_summary),
+    )
+    conn.commit()
+    conn.close()
+    return {"status": "completed"}
+
+
+@app.get("/api/recordings/{recording_id}/summary")
+def get_summary(recording_id: int):
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute(
+        """
+        CREATE TABLE IF NOT EXISTS summaries (
+            recording_id INTEGER PRIMARY KEY,
+            summary TEXT NOT NULL
+        )
+        """
+    )
+    row = cursor.execute(
+        "SELECT summary FROM summaries WHERE recording_id = ?",
+        (recording_id,),
+    ).fetchone()
+    conn.close()
+    if not row:
+        raise HTTPException(status_code=404, detail="Summary not found")
+    return {"summary": row[0]}
 
 
 @app.get("/api/jobs")

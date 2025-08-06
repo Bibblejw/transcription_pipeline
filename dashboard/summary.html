@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Summary</title>
+  <style>
+    body { font-family: sans-serif; margin: 2rem; }
+    pre { white-space: pre-wrap; background: #f9f9f9; padding: 1rem; border: 1px solid #ccc; }
+  </style>
+</head>
+<body>
+  <h1>💬 Summary</h1>
+  <p><a href="/dashboard/transcripts.html">⬅️ Back to recordings</a></p>
+  <pre id="summary">Loading...</pre>
+  <script>
+    function getId() {
+      const params = new URLSearchParams(location.search);
+      return params.get('id');
+    }
+
+    async function loadSummary() {
+      const id = getId();
+      const res = await fetch(`/api/recordings/${id}/summary`);
+      if (res.ok) {
+        const data = await res.json();
+        document.getElementById('summary').textContent = data.summary;
+      } else {
+        const err = await res.json().catch(() => ({}));
+        document.getElementById('summary').textContent = `Error: ${err.detail || res.status}`;
+      }
+    }
+
+    loadSummary();
+  </script>
+</body>
+</html>
