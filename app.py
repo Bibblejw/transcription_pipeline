@@ -6,13 +6,17 @@ from fastapi.responses import FileResponse
 import sqlite3
 from pathlib import Path
 import sys
+import logging
+import builtins
+from logging_config import setup_logging
 import subprocess
 import os
 from dotenv import load_dotenv
 import numpy as np
 
 sys.path.append(str(Path(__file__).parent / "scripts"))
-
+setup_logging()
+builtins.print = lambda *args, **kwargs: logging.getLogger(__name__).info(" ".join(str(a) for a in args), **kwargs)
 load_dotenv()
 
 app = FastAPI()

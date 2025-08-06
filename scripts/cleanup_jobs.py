@@ -1,6 +1,9 @@
 import os
 import sqlite3
 from pathlib import Path
+import logging
+import builtins
+from logging_config import setup_logging
 
 try:  # python-dotenv may not be installed
     from dotenv import load_dotenv  # type: ignore
@@ -8,6 +11,9 @@ except Exception:  # pragma: no cover
     load_dotenv = lambda: None
 
 load_dotenv()
+setup_logging()
+builtins.print = lambda *args, **kwargs: logging.getLogger(__name__).info(" ".join(str(a) for a in args), **kwargs)
+logger = logging.getLogger(__name__)
 
 DB_PATH = os.getenv("TRANSCRIPTS_DB")
 
@@ -29,12 +35,12 @@ def cleanup_jobs_queue():
         cursor.execute("SELECT 1 FROM recordings WHERE filename = ?", (filename,))
         if cursor.fetchone():
             cursor.execute("DELETE FROM jobs WHERE id = ?", (job_id,))
-            print(f"🗑️ Removed completed job for: {filename}")
+            logger.info(f"🗑️ Removed completed job for: {filename}")
             removed += 1
 
     conn.commit()
     conn.close()
-    print(f"✅ Removed {removed} completed job(s)")
+    logger.info(f"✅ Removed {removed} completed job(s)")
 
 
 if __name__ == "__main__":

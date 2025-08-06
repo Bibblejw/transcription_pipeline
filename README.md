@@ -18,7 +18,7 @@ source .venv/bin/activate      # Linux/macOS
 
 ## Installation
 
-Install the required Python packages:
+Install the required Python packages (including OpenAI Whisper for transcription):
 
 ```bash
 pip install -r requirements.txt
@@ -27,6 +27,16 @@ pip install -r requirements.txt
 ## Configuration
 
 Refer to [docs/icloud_sync.md](docs/icloud_sync.md) for instructions on syncing Just Press Record recordings from iCloud Drive.
+
+### Database initialization
+
+Before queuing jobs or running the dashboard, initialize the SQLite schema by running:
+
+```bash
+python3 scripts/init_db.py
+```
+
+This will create `transcripts.db` (or the file specified by `TRANSCRIPTS_DB` in your `.env`) with the required tables.
 
 ## Running the API
 

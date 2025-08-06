@@ -1,12 +1,18 @@
 import os
 import sqlite3
+import logging
+import builtins
 from pathlib import Path
 from pydub import AudioSegment
 from dotenv import load_dotenv
 import whisper
+from logging_config import setup_logging
 
 # === Load environment ===
 load_dotenv()
+setup_logging()
+builtins.print = lambda *args, **kwargs: logging.getLogger(__name__).info(" ".join(str(a) for a in args), **kwargs)
+logger = logging.getLogger(__name__)
 
 AUDIO_DIR = Path(os.getenv("AUDIO"))
 SEGMENT_DIR = Path(os.getenv("AUDIO_SEGMENTS", "/mnt/audio/audio_segments")).resolve()
@@ -74,18 +80,18 @@ def transcribe_and_split(audio_path: Path):
             ))
 
         conn.commit()
-        print(f"✅ Completed: {transcript_id}")
+        logger.info(f"✅ Completed: {transcript_id}")
         return recording_id
 
-    except Exception as e:
-        print(f"❌ Failed to process {audio_path.name}: {e}")
+    except Exception:
+        logger.exception(f"❌ Failed to process {audio_path.name}")
         return None
     finally:
         conn.close()
 
 def main():
     audio_files = list(AUDIO_DIR.rglob("*.m4a"))
-    print(f"🔍 Found {len(audio_files)} file(s) in {AUDIO_DIR}")
+    logger.info(f"🔍 Found {len(audio_files)} file(s) in {AUDIO_DIR}")
 
     for audio_file in audio_files:
         transcribe_and_split(audio_file)

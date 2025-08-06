@@ -1,10 +1,15 @@
 import os
+import logging
+import builtins
 import smtplib
 from email.message import EmailMessage
 from dotenv import load_dotenv
+from logging_config import setup_logging
 
 # === Load environment ===
 load_dotenv()
+setup_logging()
+builtins.print = lambda *args, **kwargs: logging.getLogger(__name__).info(" ".join(str(a) for a in args), **kwargs)
 SMTP_SERVER = os.getenv("SMTP_SERVER")
 SMTP_PORT = int(os.getenv("SMTP_PORT", 587))
 EMAIL_USER = os.getenv("EMAIL_USER")
@@ -38,13 +43,13 @@ def send_transcript_email(filename):
     labelled_path = os.path.join(LABELLED_DIR, filename)
 
     if not os.path.exists(summary_path) or not os.path.exists(labelled_path):
-        print(f"❌ Missing summary or transcript for {filename}")
+        logger.error(f"❌ Missing summary or transcript for {filename}")
         return
 
     tag, praci, summary = parse_summary_file(summary_path)
 
     if tag != "work":
-        print(f"⚠️ Skipping non-work transcript: {filename}")
+        logger.warning(f"⚠️ Skipping non-work transcript: {filename}")
         return
 
     transcript = load_transcript(labelled_path)
@@ -75,7 +80,7 @@ def send_transcript_email(filename):
         smtp.login(EMAIL_USER, EMAIL_PASS)
         smtp.send_message(msg)
 
-    print(f"✅ Email sent for: {filename}")
+    logger.info(f"✅ Email sent for: {filename}")
 
 # === Entry ===
 

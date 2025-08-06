@@ -1,9 +1,15 @@
 import os
 import time
 import subprocess
+import logging
+import builtins
 from dotenv import load_dotenv
+from logging_config import setup_logging
 
 load_dotenv()
+setup_logging()
+builtins.print = lambda *args, **kwargs: logging.getLogger(__name__).info(" ".join(str(a) for a in args), **kwargs)
+logger = logging.getLogger(__name__)
 
 AUDIO_DIR = os.getenv("AUDIO")
 TRANSCRIPTS_DIR = os.getenv("TRANSCRIPTS")
@@ -32,21 +38,21 @@ def filename_to_transcript_name(audio_path):
 
 def run_pipeline():
     try:
-        print("🔁 Running transcription...")
+        logger.info("🔁 Running transcription...")
         subprocess.run(["python", TRANSCRIBE_SCRIPT], check=True)
 
-        print("🧠 Running speaker identification...")
+        logger.info("🧠 Running speaker identification...")
         subprocess.run(["python", IDENTIFY_SCRIPT], check=True)
 
-        print("📝 Running summarisation...")
+        logger.info("📝 Running summarisation...")
         subprocess.run(["python", SUMMARISE_SCRIPT], check=True)
 
-        print("✅ All stages completed.\n")
-    except subprocess.CalledProcessError as e:
-        print(f"❌ Error during processing: {e}")
+        logger.info("✅ All stages completed.\n")
+        except subprocess.CalledProcessError:
+            logger.exception("❌ Error during processing")
 
 def monitor_loop():
-    print(f"📡 Polling '{AUDIO_DIR}' every {POLL_INTERVAL} seconds...")
+    logger.info(f"📡 Polling '{AUDIO_DIR}' every {POLL_INTERVAL} seconds...")
     while True:
         unprocessed_found = False
         audio_files = get_all_audio_files()
@@ -54,13 +60,13 @@ def monitor_loop():
             transcript_name = filename_to_transcript_name(audio_path)
             transcript_path = os.path.join(TRANSCRIPTS_DIR, transcript_name)
             if not os.path.exists(transcript_path):
-                print(f"🎙️ New file detected: {audio_path}")
+                logger.info(f"🎙️ New file detected: {audio_path}")
                 run_pipeline()
                 unprocessed_found = True
                 break  # Stop after one new file to avoid overlap
 
         if not unprocessed_found:
-            print("📭 No new files detected.")
+            logger.info("📭 No new files detected.")
         time.sleep(POLL_INTERVAL)
 
 if __name__ == "__main__":

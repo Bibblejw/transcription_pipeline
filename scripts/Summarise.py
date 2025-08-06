@@ -1,7 +1,10 @@
 import os
 import json
+import logging
+import builtins
 from dotenv import load_dotenv
 from openai import OpenAI
+from logging_config import setup_logging
 
 # === Load environment ===
 load_dotenv()
@@ -10,6 +13,9 @@ LABELLED_DIR = os.getenv("TRANSCRIPTS_LABELLED")
 SUMMARY_DIR = os.getenv("SUMMARIES")
 
 client = OpenAI(api_key=OPENAI_API_KEY)
+setup_logging()
+builtins.print = lambda *args, **kwargs: logging.getLogger(__name__).info(" ".join(str(a) for a in args), **kwargs)
+logger = logging.getLogger(__name__)
 
 # === Parameters ===
 CHUNK_SIZE = 7000  # characters
@@ -115,8 +121,8 @@ chunks: {len(chunks)}
             save_summary(fname.replace(".txt", ".md"), full_output)
             print("   ✅ Summary saved.")
 
-        except Exception as e:
-            print(f"❌ Failed on {fname}: {e}")
+        except Exception:
+            logger.exception(f"❌ Failed on {fname}")
 
 if __name__ == "__main__":
     main()

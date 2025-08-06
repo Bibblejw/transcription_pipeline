@@ -1,13 +1,21 @@
 import sqlite3
 import sys
 from pathlib import Path
+
 import os
+import logging
+import builtins
+from logging_config import setup_logging
 
 import numpy as np
 from resemblyzer import VoiceEncoder, preprocess_wav
 from dotenv import load_dotenv
 
 load_dotenv()
+
+setup_logging()
+builtins.print = lambda *args, **kwargs: logging.getLogger(__name__).info(" ".join(str(a) for a in args), **kwargs)
+logger = logging.getLogger(__name__)
 
 DB_PATH = Path(__file__).resolve().parent.parent / "transcripts.db"
 AUDIO_SEGMENTS_DIR = Path(os.getenv("AUDIO_SEGMENTS", "/mnt/audio/audio_segments"))
@@ -65,8 +73,8 @@ def main(recording_id: int):
             emb = encoder.embed_utterance(wav)
             seg_info.append((seg_id, str(segment_path), emb))
             embeddings.append(emb)
-        except Exception as e:
-            print(f"⚠️ Failed to process {segment_path}: {e}")
+        except Exception:
+            logger.exception(f"⚠️ Failed to process {segment_path}")
     embeddings = np.array(embeddings)
     if len(embeddings) == 0:
         return
@@ -188,6 +196,6 @@ def main(recording_id: int):
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
-        print("Usage: speaker_identification.py RECORDING_ID")
+        logger.error("Usage: speaker_identification.py RECORDING_ID")
         sys.exit(1)
     main(int(sys.argv[1]))

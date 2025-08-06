@@ -1,8 +1,11 @@
 import os
 import re
 import json
+import logging
+import builtins
 from dotenv import load_dotenv
 from openai import OpenAI
+from logging_config import setup_logging
 from maintain_global_speakers import (
     load_global_map,
     save_global_map,
@@ -11,6 +14,9 @@ from maintain_global_speakers import (
 
 # === Load environment ===
 load_dotenv()
+setup_logging()
+builtins.print = lambda *args, **kwargs: logging.getLogger(__name__).info(" ".join(str(a) for a in args), **kwargs)
+logger = logging.getLogger(__name__)
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 TRANSCRIPTS_DIR = os.getenv("TRANSCRIPTS")
 SPEAKER_MAPS_DIR = os.getenv("SPEAKER_MAPS")
@@ -78,8 +84,8 @@ def identify_speakers_from_text(text, global_map, max_chunks=3, chunk_size=6000)
             for speaker, name in result.items():
                 if speaker not in aggregated_map:
                     aggregated_map[speaker] = name
-        except Exception as e:
-            print(f"⚠️ GPT error in chunk {i + 1}: {e}")
+        except Exception:
+            logger.exception(f"⚠️ GPT error in chunk {i + 1}")
 
     return aggregated_map
 
@@ -135,8 +141,8 @@ def main():
             save_labelled_transcript(fname, labelled_text)
             print(f"✅ Output saved for {fname}")
 
-        except Exception as e:
-            print(f"❌ Failed to process {fname}: {e}")
+            except Exception:
+                logger.exception(f"❌ Failed to process {fname}")
 
 if __name__ == "__main__":
     main()

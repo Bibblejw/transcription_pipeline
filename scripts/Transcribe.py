@@ -1,9 +1,15 @@
 import os
+import logging
+import builtins
 import requests
 from dotenv import load_dotenv
+from logging_config import setup_logging
 
 # Load environment variables from .env
 load_dotenv()
+setup_logging()
+builtins.print = lambda *args, **kwargs: logging.getLogger(__name__).info(" ".join(str(a) for a in args), **kwargs)
+logger = logging.getLogger(__name__)
 API_KEY = os.getenv("WHISPERAPI")
 AUDIO_DIR = os.getenv("AUDIO")
 TRANSCRIPTS_DIR = os.getenv("TRANSCRIPTS")
@@ -69,7 +75,7 @@ def save_transcript(file_path, segments):
 
 def main():
     if not API_KEY or not AUDIO_DIR or not TRANSCRIPTS_DIR:
-        print("❌ Missing WHISPERAPI, AUDIO, or OUTPUT in .env")
+        logger.error("❌ Missing WHISPERAPI, AUDIO, or OUTPUT in .env")
         return
 
     os.makedirs(TRANSCRIPTS_DIR, exist_ok=True)
@@ -85,8 +91,8 @@ def main():
             segments = result.get("segments", [])
             save_transcript(file_path, segments)
             print(f"✅ Transcript saved for: {file_path}")
-        except Exception as e:
-            print(f"❌ Error processing {file_path}: {e}")
+        except Exception:
+            logger.exception(f"❌ Error processing {file_path}")
 
 if __name__ == "__main__":
     main()

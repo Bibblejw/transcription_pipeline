@@ -2,9 +2,15 @@ import os
 import time
 import sqlite3
 from pathlib import Path
+import logging
+import builtins
+from logging_config import setup_logging
 from dotenv import load_dotenv
 
 load_dotenv()
+setup_logging()
+builtins.print = lambda *args, **kwargs: logging.getLogger(__name__).info(" ".join(str(a) for a in args), **kwargs)
+logger = logging.getLogger(__name__)
 
 AUDIO_DIR = os.getenv("AUDIO")
 DB_PATH = os.getenv("TRANSCRIPTS_DB")
@@ -18,6 +24,7 @@ def scan_for_new_files():
     root_dir = Path(AUDIO_DIR)
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
+    logger.debug(DB_PATH)
 
     # Ensure the jobs table exists so lookups/inserts don't fail
     cursor.execute(
@@ -38,7 +45,7 @@ def scan_for_new_files():
                 if name.lower().endswith(".m4a"):
                     yield Path(dirpath) / name
 
-    print(f"📡 Monitoring '{root_dir}' for new audio files...")
+    logger.info(f"📡 Monitoring '{root_dir}' for new audio files...")
     try:
         while True:
             for path in iter_audio_files():
@@ -57,7 +64,7 @@ def scan_for_new_files():
                     (str(path),),
                 )
                 conn.commit()
-                print(f"📥 Queued job for: {path}")
+                logger.info(f"📥 Queued job for: {path}")
 
             time.sleep(POLL_INTERVAL)
     finally:

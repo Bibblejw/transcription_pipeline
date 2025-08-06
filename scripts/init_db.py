@@ -1,7 +1,12 @@
 import sqlite3
 from pathlib import Path
+import logging
+import builtins
+from logging_config import setup_logging
 
-db_path = Path("~/transcription_pipeline/transcripts.db")
+setup_logging()
+builtins.print = lambda *args, **kwargs: logging.getLogger(__name__).info(" ".join(str(a) for a in args), **kwargs)
+db_path = Path("transcripts.db")
 db_path.parent.mkdir(parents=True, exist_ok=True)
 
 conn = sqlite3.connect(db_path)

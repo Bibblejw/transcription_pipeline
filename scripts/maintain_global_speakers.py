@@ -1,8 +1,15 @@
 import os
 import json
 from datetime import datetime
+import logging
+import builtins
+from logging_config import setup_logging
 
 GLOBAL_MAP_PATH = "global_speakers.json"
+
+setup_logging()
+builtins.print = lambda *args, **kwargs: logging.getLogger(__name__).info(" ".join(str(a) for a in args), **kwargs)
+logger = logging.getLogger(__name__)
 
 def load_global_map():
     if os.path.exists(GLOBAL_MAP_PATH):
