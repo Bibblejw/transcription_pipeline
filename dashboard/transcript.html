@@ -14,9 +14,13 @@
 <body>
   <h1>📝 Transcript</h1>
   <p><a href="/dashboard/transcripts.html">⬅️ Back to recordings</a></p>
+  <p>
+    <button id="export-btn" onclick="exportTranscript()">💾 Export Transcript</button>
+  </p>
   <div id="segments"></div>
   <script>
     let speakers = {};
+    let segmentsData = [];
 
     function getId() {
       const params = new URLSearchParams(location.search);
@@ -38,6 +42,7 @@
       const id = getId();
       const res = await fetch(`/api/segments/${id}`);
       const segs = await res.json();
+      segmentsData = segs;
       const container = document.getElementById('segments');
       container.innerHTML = '';
       segs.forEach(seg => {
@@ -76,6 +81,24 @@
     }
 
     function play(url) { new Audio(url).play(); }
+
+    function exportTranscript() {
+      if (!segmentsData.length) {
+        alert('No transcript data to export.');
+        return;
+      }
+      const lines = segmentsData.map(seg => `[${speakerName(seg.speaker_id)}] ${seg.transcript}`);
+      const text = lines.join('\n');
+      const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `transcript_${getId()}.txt`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
 
     (async function init() {
       await loadSpeakers();
