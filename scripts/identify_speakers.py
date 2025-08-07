@@ -5,7 +5,7 @@ import logging
 import builtins
 from dotenv import load_dotenv
 from openai import OpenAI
-from logging_config import setup_logging
+from common import setup_logging
 from maintain_global_speakers import (
     load_global_map,
     save_global_map,

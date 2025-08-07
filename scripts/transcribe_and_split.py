@@ -6,7 +6,7 @@ from pathlib import Path
 from pydub import AudioSegment
 from dotenv import load_dotenv
 import whisper
-from logging_config import setup_logging
+from common import setup_logging
 
 # === Load environment ===
 load_dotenv()

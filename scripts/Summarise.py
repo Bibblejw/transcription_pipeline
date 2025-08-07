@@ -4,7 +4,7 @@ import logging
 import builtins
 from dotenv import load_dotenv
 from openai import OpenAI
-from logging_config import setup_logging
+from common import setup_logging
 
 # === Load environment ===
 load_dotenv()

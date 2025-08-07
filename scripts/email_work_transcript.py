@@ -4,7 +4,7 @@ import builtins
 import smtplib
 from email.message import EmailMessage
 from dotenv import load_dotenv
-from logging_config import setup_logging
+from common import setup_logging
 
 # === Load environment ===
 load_dotenv()

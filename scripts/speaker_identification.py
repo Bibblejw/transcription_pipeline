@@ -5,7 +5,7 @@ from pathlib import Path
 import os
 import logging
 import builtins
-from logging_config import setup_logging
+from common import setup_logging
 
 import numpy as np
 from resemblyzer import VoiceEncoder, preprocess_wav

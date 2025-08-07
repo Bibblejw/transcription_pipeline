@@ -3,7 +3,7 @@ import logging
 import builtins
 import requests
 from dotenv import load_dotenv
-from logging_config import setup_logging
+from common import setup_logging
 
 # Load environment variables from .env
 load_dotenv()

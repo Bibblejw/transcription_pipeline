@@ -2,7 +2,7 @@ import sqlite3
 from pathlib import Path
 import logging
 import builtins
-from logging_config import setup_logging
+from common import setup_logging
 
 setup_logging()
 builtins.print = lambda *args, **kwargs: logging.getLogger(__name__).info(" ".join(str(a) for a in args), **kwargs)
