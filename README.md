@@ -54,3 +54,13 @@ After the server is running, verify the API is responsive:
 # Expect an empty list or existing recordings
 curl http://127.0.0.1:8000/api/recordings
 ```
+
+## Running Monitoring and Dashboard Together
+
+To run the file monitor alongside the dashboard server, use the helper script:
+
+```bash
+python scripts/start_services.py
+```
+
+This launches the monitoring loop and the FastAPI dashboard in one step.
