@@ -4,7 +4,7 @@ import sqlite3
 from pathlib import Path
 import logging
 import builtins
-from logging_config import setup_logging
+from common import setup_logging
 from dotenv import load_dotenv
 
 load_dotenv()

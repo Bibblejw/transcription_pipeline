@@ -3,7 +3,7 @@ import sqlite3
 from pathlib import Path
 import logging
 import builtins
-from logging_config import setup_logging
+from common import setup_logging
 
 try:  # python-dotenv may not be installed
     from dotenv import load_dotenv  # type: ignore

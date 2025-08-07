@@ -4,7 +4,7 @@ import subprocess
 import logging
 import builtins
 from dotenv import load_dotenv
-from logging_config import setup_logging
+from common import setup_logging
 
 load_dotenv()
 setup_logging()

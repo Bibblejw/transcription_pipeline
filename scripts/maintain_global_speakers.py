@@ -3,7 +3,7 @@ import json
 from datetime import datetime
 import logging
 import builtins
-from logging_config import setup_logging
+from common import setup_logging
 
 GLOBAL_MAP_PATH = "global_speakers.json"
 
