@@ -48,8 +48,8 @@ def run_pipeline():
         subprocess.run(["python", SUMMARISE_SCRIPT], check=True)
 
         logger.info("✅ All stages completed.\n")
-        except subprocess.CalledProcessError:
-            logger.exception("❌ Error during processing")
+    except subprocess.CalledProcessError:
+        logger.exception("❌ Error during processing")
 
 def monitor_loop():
     logger.info(f"📡 Polling '{AUDIO_DIR}' every {POLL_INTERVAL} seconds...")
