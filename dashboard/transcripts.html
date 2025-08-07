@@ -13,13 +13,19 @@
 <body>
   <h1>📼 Recordings</h1>
   <p><a href="/dashboard/index.html">⬅️ Back</a></p>
+  <p>
+    <button id="batch-identify-btn" disabled>🗣 Batch Identify</button>
+    <button id="batch-summarize-btn" disabled>📝 Batch Summarize</button>
+  </p>
   <table id="recordings-table">
     <thead>
-      <tr>
+        <tr>
+        <th><input type="checkbox" id="select-all"></th>
         <th>Datetime</th>
         <th>Filename</th>
         <th>Duration</th>
         <th>Segments</th>
+        <th>Chunks</th>
         <th>Actions</th>
       </tr>
     </thead>
@@ -34,10 +40,12 @@
       recs.forEach(rec => {
         const row = document.createElement('tr');
         row.innerHTML = `
-          <td>${rec.datetime}</td>
+        <td><input type="checkbox" class="select-row" data-id="${rec.id}"></td>
+        <td>${rec.datetime}</td>
           <td>${rec.filename}</td>
-          <td>${(rec.duration_sec/60).toFixed(1)} min</td>
-          <td>${rec.segment_count}</td>
+        <td>${(rec.duration_sec/60).toFixed(1)} min</td>
+        <td>${rec.segment_count}</td>
+        <td>${rec.chunk_count}</td>
           <td>
             <a href="/dashboard/transcript.html?id=${rec.id}">📄 View</a>
             <button onclick="exportTranscript(${rec.id})">💾</button>
@@ -48,6 +56,7 @@
           </td>
         `;
         tbody.appendChild(row);
+        row.querySelector('.select-row').addEventListener('change', updateBatchButtons);
       });
     }
 
@@ -108,6 +117,33 @@
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
     }
+
+    // Batch action helpers
+    function updateBatchButtons() {
+      const selected = document.querySelectorAll('.select-row:checked');
+      const hasSelection = selected.length > 0;
+      document.getElementById('batch-identify-btn').disabled = !hasSelection;
+      document.getElementById('batch-summarize-btn').disabled = !hasSelection;
+    }
+
+    document.getElementById('select-all').addEventListener('change', function() {
+      const checked = this.checked;
+      document.querySelectorAll('.select-row').forEach(cb => { cb.checked = checked; });
+      updateBatchButtons();
+    });
+
+    document.getElementById('batch-identify-btn').addEventListener('click', async () => {
+      const ids = Array.from(document.querySelectorAll('.select-row:checked')).map(cb => cb.dataset.id);
+      for (const id of ids) { await identify(id); }
+      alert('✅ Batch identification completed');
+      loadRecordings();
+    });
+
+    document.getElementById('batch-summarize-btn').addEventListener('click', () => {
+      const ids = Array.from(document.querySelectorAll('.select-row:checked')).map(cb => cb.dataset.id);
+      // Fire off summarization requests asynchronously; user can refresh the table to see updated summaries
+      ids.forEach(id => summarize(id));
+    });
 
     loadRecordings();
   </script>

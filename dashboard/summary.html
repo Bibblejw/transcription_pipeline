@@ -13,14 +13,30 @@
   <p><a href="/dashboard/transcripts.html">⬅️ Back to recordings</a></p>
   <pre id="summary">Loading...</pre>
   <script>
-    function getId() {
+    function getParams() {
       const params = new URLSearchParams(location.search);
-      return params.get('id');
+      const ids = params.get('ids');
+      if (ids) {
+        return { batch: true, recording_ids: ids.split(',').map(x => parseInt(x, 10)) };
+      }
+      const id = params.get('id');
+      return { batch: false, recording_ids: id ? [parseInt(id, 10)] : [] };
     }
 
     async function loadSummary() {
-      const id = getId();
-      const res = await fetch(`/api/recordings/${id}/summary`);
+      const { batch, recording_ids } = getParams();
+      let res;
+      if (batch) {
+        res = await fetch('/api/recordings/batch_summarize', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ recording_ids })
+        });
+      } else if (recording_ids.length) {
+        res = await fetch(`/api/recordings/${recording_ids[0]}/summary`);
+      } else {
+        document.getElementById('summary').textContent = 'Error: no recording specified';
+        return;
+      }
       if (res.ok) {
         const data = await res.json();
         document.getElementById('summary').textContent = data.summary;

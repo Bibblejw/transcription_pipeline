@@ -14,7 +14,7 @@ SUMMARY_DIR = os.getenv("SUMMARIES")
 
 client = OpenAI(api_key=OPENAI_API_KEY)
 setup_logging()
-builtins.print = lambda *args, **kwargs: logging.getLogger(__name__).info(" ".join(str(a) for a in args), **kwargs)
+builtins.print = lambda *args, **kwargs: logging.getLogger(__name__).info(" ".join(str(a) for a in args))
 logger = logging.getLogger(__name__)
 
 # === Parameters ===

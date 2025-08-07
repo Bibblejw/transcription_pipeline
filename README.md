@@ -54,3 +54,18 @@ After the server is running, verify the API is responsive:
 # Expect an empty list or existing recordings
 curl http://127.0.0.1:8000/api/recordings
 ```
+
+### Summarize Recordings
+
+Generate and store an LLM-based summary for a specific recording by its ID:
+
+```bash
+# Trigger summarization and save to the database
+curl -X POST http://127.0.0.1:8000/api/recordings/1/summarize
+```
+
+Retrieve a previously saved summary for a recording:
+
+```bash
+curl http://127.0.0.1:8000/api/recordings/1/summary
+```
