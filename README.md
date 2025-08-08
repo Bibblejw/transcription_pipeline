@@ -2,36 +2,14 @@
 
 ## Setup
 
-You can bootstrap your local environment (create the venv, install dependencies, and copy your .env) by running:
+Bootstrap your local environment and start all services in two commands:
 
 ```bash
+# 1. Create venv, install deps, copy .env
 ./init_env.sh
-```
 
-# Requirements
-
-- Python 3.11 is required; running on other Python versions may lead to dependency errors (e.g., numba incompatibility).
-
-Copy the example config file and fill in the environment variables:
-
-```bash
-cp .env.example .env
-```
-
-Create and activate a Python virtual environment (using Python 3.11):
-
-```bash
-python3.11 -m venv .venv
-source .venv/bin/activate      # Linux/macOS
-# .venv\\Scripts\\activate    # Windows PowerShell
-```
-
-## Installation
-
-Install the required Python packages (including OpenAI Whisper for transcription):
-
-```bash
-pip install -r requirements.txt
+# 2. Activate venv & launch monitor + dashboard
+./entrypoint.sh
 ```
 
 ## Configuration

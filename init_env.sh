@@ -33,4 +33,4 @@ if [ ! -f .env ]; then
   echo "Created .env from .env.example — please edit it for your environment."
 fi
 
-echo "✅ Environment bootstrapped. Activate with 'source .venv/bin/activate' and run './entrypoint.sh'"
+echo "✅ Environment bootstrapped. You can now run './entrypoint.sh' to start the services."
