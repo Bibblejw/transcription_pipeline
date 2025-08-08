@@ -5,8 +5,8 @@
 Bootstrap your local environment and start all services in two steps:
 
 ```bash
-# 1. Create venv, install deps, copy .env, and activate it
-. init_env.sh
+# 1. Source the bootstrap script (must be sourced, not executed)
+source init_env.sh
 
 # 2. Launch monitor + dashboard
 ./entrypoint.sh
