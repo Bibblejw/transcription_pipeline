@@ -14,7 +14,7 @@ load_dotenv()
 setup_logging()
 logger = get_logger(__name__)
 
-DB_PATH = Path(__file__).resolve().parent.parent / "transcripts.db"
+DB_PATH = Path(os.getenv("TRANSCRIPTS_DB", Path(__file__).resolve().parent.parent / "transcripts.db"))
 AUDIO_SEGMENTS_DIR = Path(os.getenv("AUDIO_SEGMENTS", "/mnt/audio/audio_segments"))
 
 

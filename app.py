@@ -23,7 +23,7 @@ from summarise import split_text_into_chunks, summarise_chunk, MAX_CHUNKS
 app = FastAPI()
 app.add_middleware(CORSMiddleware, allow_origins=["*"])
 
-DB_PATH = Path(__file__).parent / "transcripts.db"
+DB_PATH = Path(os.getenv("TRANSCRIPTS_DB", Path(__file__).parent / "transcripts.db"))
 AUDIO_SEGMENTS_DIR = Path(os.getenv("AUDIO_SEGMENTS", "/mnt/audio/audio_segments"))
 DASHBOARD_DIR = Path(__file__).parent / "dashboard"
 
