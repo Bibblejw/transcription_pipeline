@@ -5,103 +5,94 @@
   <title>Transcript</title>
   <style>
     body { font-family: sans-serif; margin: 2rem; }
-    .segment { display: flex; justify-content: space-between; align-items: center; padding: 0.75rem; border-left: 4px solid #666; background: #f9f9f9; margin: 0.5rem 0; }
-    .segment .left { flex: 1; }
-    .segment .right { white-space: nowrap; margin-left: 1rem; font-size: 0.9rem; color: #555; }
-    .segment.candidate { border-left-color: #f90; }
+    table { border-collapse: collapse; width: 100%; margin-top: 1rem; }
+    th, td { border: 1px solid #ccc; padding: 0.5rem; text-align: left; vertical-align: top; }
+    audio { width: 200px; }
+    pre { white-space: pre-wrap; background: #f9f9f9; padding: 1rem; border: 1px solid #ccc; }
   </style>
 </head>
 <body>
   <h1>📝 Transcript</h1>
-  <p><a href="/dashboard/transcripts.html">⬅️ Back to recordings</a></p>
-  <p>
-    <button id="export-btn" onclick="exportTranscript()">💾 Export Transcript</button>
-  </p>
-  <div id="segments"></div>
+  <p><a href="/dashboard/index.html">⬅️ Back to recordings</a></p>
+  <div>
+    <h2>Summary</h2>
+    <pre id="summary">Loading...</pre>
+    <button id="summarize">📝 Summarize</button>
+    <button id="label">🔖 Label Speakers</button>
+  </div>
+  <table id="segments">
+    <thead>
+      <tr>
+        <th>Start</th>
+        <th>End</th>
+        <th>Speaker</th>
+        <th>Transcript</th>
+        <th>Audio</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
   <script>
-    let speakers = {};
-    let segmentsData = [];
-
     function getId() {
-      const params = new URLSearchParams(location.search);
-      return params.get('id');
-    }
-
-    async function loadSpeakers() {
-      const res = await fetch('/api/speakers');
-      const list = await res.json();
-      speakers = {};
-      list.forEach(sp => speakers[sp.id] = sp.label || sp.id);
-    }
-
-    function speakerName(id) {
-      return speakers[id] || id || 'Unknown';
+      return new URLSearchParams(location.search).get('id');
     }
 
     async function loadSegments() {
       const id = getId();
       const res = await fetch(`/api/segments/${id}`);
       const segs = await res.json();
-      segmentsData = segs;
-      const container = document.getElementById('segments');
-      container.innerHTML = '';
+      const tbody = document.querySelector('#segments tbody');
+      tbody.innerHTML = '';
       segs.forEach(seg => {
-        const div = document.createElement('div');
-        div.className = 'segment';
-        div.id = `seg-${seg.id}`;
-        const options = Object.entries(speakers)
-          .map(([sid, label]) => `<option value="${sid}" ${sid === seg.speaker_id ? 'selected' : ''}>${label}</option>`)
-          .join('');
-        div.innerHTML = `
-          <div class="left"><strong>[<span class="speaker-label">${seg.speaker_label || speakerName(seg.speaker_id)}</span>]</strong> ${seg.transcript}
-            <select onchange="changeSpeaker(${seg.id}, this.value)">
-              <option value="">Unknown</option>${options}
-            </select>
-          </div>
-          <div class="right">${seg.start_time.toFixed(1)}–${seg.end_time.toFixed(1)}s ${seg.embedding_path ? `<a href="#" onclick="play('/segments/${seg.embedding_path.split('/').pop()}');return false;" title="Play">🔊</a>` : ''}</div>
+        const file = seg.embedding_path ? seg.embedding_path.split('/').pop() : '';
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td>${seg.start_time.toFixed(1)}</td>
+          <td>${seg.end_time.toFixed(1)}</td>
+          <td>${seg.speaker_label || seg.speaker_id || ''}</td>
+          <td>${seg.transcript}</td>
+          <td>${file ? `<audio controls src="/segments/${file}"></audio>` : ''}</td>
         `;
-        container.appendChild(div);
+        tbody.appendChild(row);
       });
     }
 
-    async function changeSpeaker(id, speakerId) {
-      await fetch(`/api/segments/${id}/speaker`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ speaker_id: speakerId })
-      }).then(r => r.json()).then(res => {
-        document.querySelector(`#seg-${id} .speaker-label`).textContent = speakerName(speakerId);
-        if (res.candidates) {
-          res.candidates.forEach(cid => {
-            const el = document.getElementById(`seg-${cid}`);
-            if (el) el.classList.add('candidate');
-          });
-        }
-      });
-    }
-
-    function play(url) { new Audio(url).play(); }
-
-    function exportTranscript() {
-      if (!segmentsData.length) {
-        alert('No transcript data to export.');
-        return;
+    async function loadSummary() {
+      const id = getId();
+      const res = await fetch(`/api/recordings/${id}/summary`);
+      const pre = document.getElementById('summary');
+      if (res.ok) {
+        const data = await res.json();
+        pre.textContent = data.summary;
+      } else {
+        pre.textContent = 'No summary available';
       }
-      const lines = segmentsData.map(seg => `[${speakerName(seg.speaker_id)}] ${seg.transcript}`);
-      const text = lines.join('\n');
-      const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `transcript_${getId()}.txt`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
     }
+
+    document.getElementById('summarize').addEventListener('click', async () => {
+      const id = getId();
+      const res = await fetch(`/api/recordings/${id}/summarize`, { method: 'POST' });
+      if (res.ok) {
+        alert('Summarization started');
+        loadSummary();
+      } else {
+        alert('Failed to summarize');
+      }
+    });
+
+    document.getElementById('label').addEventListener('click', async () => {
+      const id = getId();
+      const res = await fetch(`/api/recordings/${id}/label_speakers`, { method: 'POST' });
+      if (res.ok) {
+        alert('Labeling started');
+        loadSegments();
+      } else {
+        alert('Failed to label speakers');
+      }
+    });
 
     (async function init() {
-      await loadSpeakers();
+      await loadSummary();
       await loadSegments();
     })();
   </script>
