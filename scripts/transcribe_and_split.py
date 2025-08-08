@@ -5,6 +5,7 @@ from pydub import AudioSegment
 from dotenv import load_dotenv
 import whisper
 from common import setup_logging, get_logger
+import vad_split
 
 # === Load environment ===
 load_dotenv()
@@ -45,7 +46,7 @@ def transcribe_and_split(audio_path: Path):
 
         print(f"🎙️ Transcribing: {audio_path}")
         audio = AudioSegment.from_file(audio_path)
-        result = model.transcribe(str(audio_path), verbose=False, language="en")
+        vad_segments = vad_split.split_audio(audio_path, SEGMENT_DIR, prefix=transcript_id)
 
         # Insert into recordings table
         cursor.execute(
@@ -54,25 +55,18 @@ def transcribe_and_split(audio_path: Path):
         )
         recording_id = cursor.lastrowid
 
-        for i, segment in enumerate(result['segments']):
-            start_ms = int(segment['start'] * 1000)
-            end_ms = int(segment['end'] * 1000)
-            segment_audio = audio[start_ms:end_ms]
-
-            segment_filename = f"{transcript_id}_seg{i:03d}.wav"
-            segment_path = SEGMENT_DIR / segment_filename
-            segment_audio.export(segment_path, format="wav")
-
+        for start_sec, end_sec, segment_path in vad_segments:
+            transcription = model.transcribe(str(segment_path), verbose=False, language="en")
             cursor.execute("""
                 INSERT INTO segments (
                     recording_id, start_time, end_time, speaker_id, transcript, embedding_path
                 ) VALUES (?, ?, ?, ?, ?, ?)
             """, (
                 recording_id,
-                segment['start'],
-                segment['end'],
+                start_sec,
+                end_sec,
                 None,
-                segment['text'].strip(),
+                transcription['text'].strip(),
                 str(segment_path)
             ))
 
