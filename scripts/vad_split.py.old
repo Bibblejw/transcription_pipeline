@@ -1,0 +1,76 @@
+#!/usr/bin/env python3
+"""
+Silero VAD-based segmentation for speaker-separated audio streams.
+
+This script processes per-speaker WAV files produced by source separation
+and splits them into voice activity segments using the Silero VAD model.
+"""
+import argparse
+from pathlib import Path
+
+import torch
+from common import setup_logging, get_logger
+
+
+def parse_args():
+    parser = argparse.ArgumentParser(
+        description="Silero VAD-based segmentation for speaker-separated audio streams"
+    )
+    parser.add_argument(
+        "--input-dir", "-i",
+        type=Path,
+        required=True,
+        help="Directory containing speaker-separated WAV files",
+    )
+    parser.add_argument(
+        "--output-dir", "-o",
+        type=Path,
+        required=True,
+        help="Directory to save VAD-based audio segments",
+    )
+    parser.add_argument(
+        "--sampling-rate", "-r",
+        type=int,
+        default=16000,
+        help="Sampling rate for VAD (default: 16000)",
+    )
+    parser.add_argument(
+        "--reload-model", action="store_true",
+        help="Force reload of the Silero VAD model",
+    )
+    return parser.parse_args()
+
+
+def main():
+    args = parse_args()
+    setup_logging()
+    logger = get_logger(__name__)
+
+    input_dir = args.input_dir.resolve()
+    output_dir = args.output_dir.resolve()
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    logger.info("Loading Silero VAD model...")
+    model, utils = torch.hub.load(
+        "snakers4/silero-vad", "silero_vad", force_reload=args.reload_model
+    )
+    (get_speech_timestamps, save_audio, read_audio, _, collect_chunks) = utils
+
+    for wav_path in sorted(input_dir.glob("*.wav")):
+        try:
+            logger.info(f"Processing {wav_path.name}...")
+            audio = read_audio(str(wav_path), sampling_rate=args.sampling_rate)
+            timestamps = get_speech_timestamps(
+                audio, model, sampling_rate=args.sampling_rate
+            )
+            chunks = collect_chunks(timestamps, audio)
+            for idx, chunk in enumerate(chunks):
+                out_path = output_dir / f"{wav_path.stem}_seg{idx:03d}.wav"
+                save_audio(str(out_path), chunk, args.sampling_rate)
+            logger.info(f"Saved {len(chunks)} segments for {wav_path.name}")
+        except Exception:
+            logger.exception(f"Failed to segment {wav_path.name}")
+
+
+if __name__ == "__main__":
+    main()

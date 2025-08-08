@@ -1,0 +1,99 @@
+ROLE
+Create a self-contained validation that confirms the separation+VAD+DB pipeline is implemented per spec. Do NOT change existing implementation files; only add test/validation artifacts.
+
+ADD THE FOLLOWING FILES
+- tests/validate_pipeline.py
+- Makefile (append a `validate` target if Makefile exists; otherwise create a minimal one)
+
+tests/validate_pipeline.py — REQUIREMENTS
+- Python 3.11 standard libs + numpy + soundfile + sqlite3.
+- No external test runner; just `python tests/validate_pipeline.py` exits 0/1.
+- Generate synthetic WAV fixtures so the test is hermetic.
+
+WHAT THE VALIDATOR MUST DO (IN ORDER)
+
+1) **Repo sanity**
+   - Assert these files exist: 
+     db/models.py
+     scripts/separation_run.py
+     scripts/vad_segment.py
+     scripts/ingest_vad.py
+     scripts/merge_transcript.py
+
+2) **Fresh workspace**
+   - Create dir `samples/separated/` if missing.
+   - Create two mono 16kHz WAVs with 1.5s synthetic audio:
+       samples/separated/speaker_1.wav
+       samples/separated/speaker_2.wav
+     (Use numpy + soundfile; simple sine + silence is fine.)
+   - Remove `local.db` if it exists.
+   - Create `artifacts/` folder for JSON outputs.
+
+3) **Separation JSON**
+   - Run:
+     python scripts/separation_run.py --provider noop \
+       --streams-dir samples/separated --recording-id test_rec \
+       --sr 16000 --emit-json
+   - Capture stdout, parse JSON, assert:
+     - keys: recording_id, provider, sample_rate, streams
+     - provider == "noop", sample_rate == 16000
+     - len(streams) >= 2 and each has local_speaker_key, path, offset_sec, duration_sec > 0
+   - Save as artifacts/sep.json
+
+4) **VAD JSON (mock)**
+   - Run (for speaker_1.wav):
+     python scripts/vad_segment.py --input samples/separated/speaker_1.wav \
+       --backend mock --emit-json
+   - Parse JSON, assert:
+     - keys: local_speaker_key, segments, backend
+     - backend == "mock", len(segments) >= 1
+     - segments are sorted and non-overlapping by start_local_sec/end_local_sec
+   - Save as artifacts/vad_spk1.json
+   - Duplicate the same for speaker_2.wav → artifacts/vad_spk2.json
+
+5) **Ingest → SQLite**
+   - Run:
+     python scripts/ingest_vad.py --recording-id test_rec \
+       --separation-json artifacts/sep.json \
+       --vad-json artifacts/vad_spk1.json artifacts/vad_spk2.json \
+       --db sqlite:///local.db
+   - Connect to local.db with sqlite3 and assert:
+     - Tables exist: recordings, local_speakers, snippets
+     - SELECT COUNT(*) FROM local_speakers WHERE recording_id='test_rec' >= 2
+     - SELECT COUNT(*) FROM snippets WHERE recording_id='test_rec' >= 2
+
+   - **Uniqueness check**: re-run the SAME ingest command; assert snippet count unchanged
+     (verifies unique constraint on (local_speaker_id, start_local_sec, end_local_sec)).
+
+6) **Merged timeline**
+   - Run:
+     python scripts/merge_transcript.py --recording-id test_rec \
+       --db sqlite:///local.db --emit-json
+   - Parse JSON, assert:
+     - keys: recording_id, timeline
+     - len(timeline) >= 2
+     - timeline is globally sorted by start_sec (non-decreasing)
+     - each entry contains: local_speaker_id, speaker_local, start_sec, end_sec
+
+7) **Optional fallback sanity**
+   - Run vad_segment.py WITHOUT specifying backend:
+     python scripts/vad_segment.py --input samples/separated/speaker_1.wav --emit-json
+   - Accept backend "silero" or "webrtcvad" or "mock" (depending on availability), but assert valid JSON shape (as in step 4).
+
+8) **Output**
+   - If all checks pass: print "ALL CHECKS PASSED" and exit(0).
+   - On first failure: print a concise reason and exit(1).
+
+MAKEFILE TARGET
+- Ensure `make validate` runs:
+    python tests/validate_pipeline.py
+  If a Makefile exists, append the target; else create a minimal Makefile with just that target.
+
+SUCCESS CRITERIA
+- Running `python tests/validate_pipeline.py` (or `make validate`) on a clean repo:
+  - Builds fixtures
+  - Produces artifacts/sep.json and artifacts/vad_*.json
+  - Creates local.db with expected rows
+  - Re-ingest is idempotent (row count unchanged)
+  - Emits a merged timeline in correct order
+  - Exits 0 with "ALL CHECKS PASSED"

@@ -1,0 +1,87 @@
+ROLE
+Implement the separation+VAD+DB wiring for the transcription pipeline with small, testable CLIs and strict JSON contracts.
+
+LANGUAGE & LIBS
+- Python 3.11
+- SQLAlchemy (SQLite)
+- soundfile (or torchaudio)
+- webrtcvad (Silero optional; fallback to webrtcvad if torch/Silero unavailable)
+- typer (or argparse)
+
+DB (SQLite via SQLAlchemy)
+Tables:
+1) recordings(id TEXT PK, file_path TEXT, datetime TEXT, duration_sec REAL, source TEXT)
+2) local_speakers(id TEXT PK, recording_id TEXT FK, provider TEXT, stream_key TEXT, path TEXT, sample_rate INT, offset_sec REAL DEFAULT 0.0, global_speaker_id TEXT NULL)
+3) snippets(id TEXT PK, recording_id TEXT FK, local_speaker_id TEXT FK,
+            start_local_sec REAL, end_local_sec REAL,
+            start_sec REAL, end_sec REAL,
+            vad_score REAL NULL, source TEXT, text TEXT NULL, asr_confidence REAL NULL)
+Indexes: snippets(recording_id, start_sec)
+Uniq: (local_speaker_id, start_local_sec, end_local_sec)
+Formula: start_sec = offset_sec + start_local_sec; end_sec = offset_sec + end_local_sec
+
+DELIVERABLE CLIs (in scripts/)
+A) separation_run.py
+- Purpose: discover/register per-speaker WAVs (provider: noop only).
+- Args:
+  --recording-id STR
+  --provider [noop|demucs|sepformer] (implement noop; others raise NotImplementedError)
+  --streams-dir PATH (folder with speaker_*.wav)
+  --sr INT
+  --emit-json
+- Behavior (noop): list WAVs, probe duration/sr, output JSON to stdout:
+  { "recording_id": "...", "provider": "noop", "sample_rate": 16000,
+    "streams":[{"local_speaker_key":"speaker_1","path":".../speaker_1.wav","offset_sec":0.0,"duration_sec":123.45}, ...] }
+
+B) vad_segment.py
+- Purpose: VAD a single stream → segments.
+- Args:
+  --input PATH
+  --backend [silero|webrtcvad|mock] (default silero; auto-fallback to webrtcvad if silero unavailable; mock = deterministic)
+  --threshold FLOAT (silero, default 0.5)
+  --min-speech-ms INT (300) --min-silence-ms INT (150) --speech-pad-ms INT (120) --merge-gap-ms INT (120)
+  --emit-json
+- Output JSON:
+  { "local_speaker_key":"speaker_1",
+    "segments":[{"start_local_sec":12.32,"end_local_sec":15.71,"vad_score":0.94}, ...],
+    "backend":"webrtcvad|silero|mock" }
+
+C) ingest_vad.py
+- Purpose: write separation+VAD to DB with absolute timings.
+- Args:
+  --recording-id STR
+  --separation-json PATH
+  --vad-json PATH... (one per stream)
+  --db PATH (default sqlite:///local.db)
+- Behavior: upsert recordings; upsert local_speakers; insert snippets; compute start_sec/end_sec via offset.
+
+D) merge_transcript.py
+- Purpose: emit merged, chronological timeline for a recording.
+- Args:
+  --recording-id STR
+  --db PATH
+  --emit-json
+- Output JSON:
+  { "recording_id":"...", "timeline":[
+      {"local_speaker_id":"...","speaker_local":"speaker_1","speaker_global":null,"start_sec":12.32,"end_sec":15.71,"text":null}, ...
+    ] }
+- Query: SELECT ... FROM snippets s JOIN local_speakers ls ON s.local_speaker_id=ls.id
+         WHERE s.recording_id=:rec ORDER BY s.start_sec, s.end_sec;
+
+MINIMUM FILES
+- db/models.py with create_all(engine)
+- scripts/{separation_run.py,vad_segment.py,ingest_vad.py,merge_transcript.py}
+- requirements.txt
+
+REQUIREMENTS (minimal)
+typer, SQLAlchemy, soundfile, numpy, webrtcvad
+# Optional: torch (if available) for silero; gracefully fall back to webrtcvad.
+
+ACCEPTANCE
+1) separation_run.py (noop) prints valid JSON with streams[].path/duration_sec.
+2) vad_segment.py (mock) prints deterministic segments.
+3) ingest_vad.py creates tables and inserts snippets; unique constraint prevents dupes.
+4) merge_transcript.py prints timeline ordered by start_sec.
+5) If silero unavailable, default backend falls back to webrtcvad without crashing.
+
+BEGIN: create db/models.py (with tables/index/unique), then implement CLIs in order A→D.

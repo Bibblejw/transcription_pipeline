@@ -1,0 +1,6 @@
+model: "htdemucs"
+device: "cuda"  # Device to run Demucs on: 'cuda' or 'cpu'
+sample_rate: 48000  # Target sample rate for separation
+# Optional: number of crops to average (for long audio)
+segment_size: null
+overlap: null
