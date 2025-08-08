@@ -12,9 +12,9 @@ if [ -f ".venv/bin/activate" ]; then
 fi
 
 # Install dependencies if core packages are missing
-if ! python -c "import fastapi, requests, pydub" >/dev/null 2>&1; then
+if ! python -c "import fastapi, requests, pydub, dotenv" >/dev/null 2>&1; then
     echo "📦 Installing core Python dependencies..."
-    pip install fastapi requests pydub >/dev/null
+    pip install -r requirements.txt >/dev/null
 fi
 
 # Enforce Python 3.11 for local runs to avoid compatibility issues
