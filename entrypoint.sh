@@ -1,6 +1,10 @@
 #!/bin/bash
 set -e
 
+# Ensure working directory is the script's directory (repository root)
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$SCRIPT_DIR"
+
 # Activate Python virtual environment if it exists (so python3 refers to the venv interpreter)
 if [ -f ".venv/bin/activate" ]; then
     # shellcheck source=/dev/null
