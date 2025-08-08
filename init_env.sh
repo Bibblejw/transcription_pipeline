@@ -1,4 +1,12 @@
 #!/usr/bin/env bash
+# If this script is executed rather than sourced, warn and exit
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+  echo "❗️ Please source this script instead of executing it:"
+  echo "    source init_env.sh"
+  echo "or"
+  echo "    . init_env.sh"
+  exit 1
+fi
 set -euo pipefail
 
 # -----------------------------------------------------------------------------

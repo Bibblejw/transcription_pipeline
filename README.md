@@ -2,13 +2,13 @@
 
 ## Setup
 
-Bootstrap your local environment and start all services in two commands:
+Bootstrap your local environment and start all services in two steps:
 
 ```bash
-# 1. Create venv, install deps, copy .env
-./init_env.sh
+# 1. Create venv, install deps, copy .env, and activate it
+. init_env.sh
 
-# 2. Activate venv & launch monitor + dashboard
+# 2. Launch monitor + dashboard
 ./entrypoint.sh
 ```
 
