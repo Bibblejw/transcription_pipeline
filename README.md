@@ -2,16 +2,26 @@
 
 ## Setup
 
+You can bootstrap your local environment (create the venv, install dependencies, and copy your .env) by running:
+
+```bash
+./init_env.sh
+```
+
+# Requirements
+
+- Python 3.11 is required; running on other Python versions may lead to dependency errors (e.g., numba incompatibility).
+
 Copy the example config file and fill in the environment variables:
 
 ```bash
 cp .env.example .env
 ```
 
-Create and activate a Python virtual environment:
+Create and activate a Python virtual environment (using Python 3.11):
 
 ```bash
-python3 -m venv .venv
+python3.11 -m venv .venv
 source .venv/bin/activate      # Linux/macOS
 # .venv\\Scripts\\activate    # Windows PowerShell
 ```
@@ -88,6 +98,8 @@ curl http://127.0.0.1:8000/api/recordings/1/summary
 ```
 =======
 ## Running Monitoring and Dashboard Together
+
+> **Note:** Before running the monitoring and dashboard together locally, ensure you've created and activated your Python virtual environment, installed dependencies with `pip install -r requirements.txt`, and copied `.env.example` to `.env`.
 
 To run the file monitor alongside the dashboard server, use the helper script:
 
