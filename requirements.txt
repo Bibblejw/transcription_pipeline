@@ -7,3 +7,4 @@ openai
 resemblyzer
 openai-whisper
 webrtcvad
+pydub
