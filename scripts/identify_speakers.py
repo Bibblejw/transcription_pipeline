@@ -1,11 +1,9 @@
 import os
 import re
 import json
-import logging
-import builtins
 from dotenv import load_dotenv
 from openai import OpenAI
-from common import setup_logging
+from common import setup_logging, get_logger
 from maintain_global_speakers import (
     load_global_map,
     save_global_map,
@@ -15,8 +13,7 @@ from maintain_global_speakers import (
 # === Load environment ===
 load_dotenv()
 setup_logging()
-builtins.print = lambda *args, **kwargs: logging.getLogger(__name__).info(" ".join(str(a) for a in args), **kwargs)
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 TRANSCRIPTS_DIR = os.getenv("TRANSCRIPTS")
 SPEAKER_MAPS_DIR = os.getenv("SPEAKER_MAPS")
@@ -141,8 +138,8 @@ def main():
             save_labelled_transcript(fname, labelled_text)
             print(f"✅ Output saved for {fname}")
 
-            except Exception:
-                logger.exception(f"❌ Failed to process {fname}")
+        except Exception:
+            logger.exception(f"❌ Failed to process {fname}")
 
 if __name__ == "__main__":
     main()

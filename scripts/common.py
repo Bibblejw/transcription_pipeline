@@ -6,4 +6,4 @@ ROOT = Path(__file__).resolve().parent.parent
 if str(ROOT) not in sys.path:
     sys.path.append(str(ROOT))
 
-from logging_config import setup_logging  # noqa: E402
+from logging_config import setup_logging, get_logger  # noqa: E402

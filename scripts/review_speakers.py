@@ -1,9 +1,7 @@
 import os
 import json
-import logging
-import builtins
 from dotenv import load_dotenv
-from common import setup_logging
+from common import setup_logging, get_logger
 from maintain_global_speakers import (
     load_global_map,
     save_global_map,
@@ -13,7 +11,7 @@ from maintain_global_speakers import (
 # === Load environment variables ===
 load_dotenv()
 setup_logging()
-builtins.print = lambda *args, **kwargs: logging.getLogger(__name__).info(" ".join(str(a) for a in args), **kwargs)
+logger = get_logger(__name__)
 SPEAKER_MAPS_DIR = os.getenv("SPEAKER_MAPS")
 TRANSCRIPTS_DIR = os.getenv("TRANSCRIPTS")
 LABELLED_TRANSCRIPTS_DIR = os.getenv("TRANSCRIPTS_LABELLED")

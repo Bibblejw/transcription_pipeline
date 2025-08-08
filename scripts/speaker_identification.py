@@ -3,9 +3,7 @@ import sys
 from pathlib import Path
 
 import os
-import logging
-import builtins
-from common import setup_logging
+from common import setup_logging, get_logger
 
 import numpy as np
 from resemblyzer import VoiceEncoder, preprocess_wav
@@ -14,8 +12,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 setup_logging()
-builtins.print = lambda *args, **kwargs: logging.getLogger(__name__).info(" ".join(str(a) for a in args), **kwargs)
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 DB_PATH = Path(__file__).resolve().parent.parent / "transcripts.db"
 AUDIO_SEGMENTS_DIR = Path(os.getenv("AUDIO_SEGMENTS", "/mnt/audio/audio_segments"))

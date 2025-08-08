@@ -1,9 +1,7 @@
 import os
 import sqlite3
 from pathlib import Path
-import logging
-import builtins
-from common import setup_logging
+from common import setup_logging, get_logger
 
 try:  # python-dotenv may not be installed
     from dotenv import load_dotenv  # type: ignore
@@ -12,8 +10,7 @@ except Exception:  # pragma: no cover
 
 load_dotenv()
 setup_logging()
-builtins.print = lambda *args, **kwargs: logging.getLogger(__name__).info(" ".join(str(a) for a in args), **kwargs)
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 DB_PATH = os.getenv("TRANSCRIPTS_DB")
 
