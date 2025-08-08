@@ -1,10 +1,12 @@
+import os
 import sqlite3
 from pathlib import Path
 from common import setup_logging, get_logger
 
 setup_logging()
 logger = get_logger(__name__)
-db_path = Path("transcripts.db")
+db_path = Path(os.getenv("TRANSCRIPTS_DB", "transcripts.db"))
+db_path = db_path if db_path.is_absolute() else Path.cwd() / db_path
 db_path.parent.mkdir(parents=True, exist_ok=True)
 
 conn = sqlite3.connect(db_path)

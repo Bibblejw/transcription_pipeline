@@ -1,0 +1,16 @@
+version: '3.9'
+services:
+  transcription:
+    build: .
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./audio:/mnt/audio
+      - ./audio_segments:/mnt/audio_segments
+      - ./db:/mnt/db
+    env_file:
+      - .env
+    environment:
+      AUDIO: /mnt/audio
+      AUDIO_SEGMENTS: /mnt/audio_segments
+      TRANSCRIPTS_DB: /mnt/db/transcripts.db
