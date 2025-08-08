@@ -13,7 +13,14 @@ def main():
     processes = []
     try:
         monitor_cmd = [sys.executable, str(ROOT / "scripts" / "monitor.py")]
-        dashboard_cmd = ["uvicorn", "app:app", "--reload", "--host", "0.0.0.0"]
+        dashboard_cmd = [
+            "uvicorn",
+            "app:app",
+            "--host",
+            "0.0.0.0",
+            "--port",
+            "8000",
+        ]
 
         logger.info("Starting monitor...")
         processes.append(

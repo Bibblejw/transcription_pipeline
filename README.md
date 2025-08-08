@@ -38,6 +38,23 @@ python3 scripts/init_db.py
 
 This will create `transcripts.db` (or the file specified by `TRANSCRIPTS_DB` in your `.env`) with the required tables.
 
+## Docker
+
+To run the full pipeline in containers, build the image and start the stack with Docker Compose. Create host directories for audio input, audio segments, and the database, then run:
+
+```bash
+docker-compose up -d
+```
+
+The service mounts the following paths by default (override in `docker-compose.yml`):
+
+* `./audio` → `/mnt/audio`
+* `./audio_segments` → `/mnt/audio_segments`
+* `./db` → `/mnt/db`
+
+Place recordings into the mounted audio directory and they will be processed automatically. Visit the dashboard at [http://localhost:8000/dashboard](http://localhost:8000/dashboard).
+
+
 ## Running the API
 
 Start the FastAPI server:
