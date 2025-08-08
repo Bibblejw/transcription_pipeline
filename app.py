@@ -6,9 +6,7 @@ from fastapi.responses import FileResponse
 import sqlite3
 from pathlib import Path
 import sys
-import logging
-import builtins
-from logging_config import setup_logging
+from logging_config import setup_logging, get_logger
 import subprocess
 import os
 from dotenv import load_dotenv
@@ -16,11 +14,11 @@ import numpy as np
 
 sys.path.append(str(Path(__file__).parent / "scripts"))
 setup_logging()
-builtins.print = lambda *args, **kwargs: logging.getLogger(__name__).info(" ".join(str(a) for a in args), **kwargs)
+logger = get_logger(__name__)
 load_dotenv()
 
 # Summarization utilities
-from Summarise import split_text_into_chunks, summarise_chunk, MAX_CHUNKS
+from summarise import split_text_into_chunks, summarise_chunk, MAX_CHUNKS
 
 app = FastAPI()
 app.add_middleware(CORSMiddleware, allow_origins=["*"])

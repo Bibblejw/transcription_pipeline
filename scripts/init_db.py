@@ -1,11 +1,9 @@
 import sqlite3
 from pathlib import Path
-import logging
-import builtins
-from common import setup_logging
+from common import setup_logging, get_logger
 
 setup_logging()
-builtins.print = lambda *args, **kwargs: logging.getLogger(__name__).info(" ".join(str(a) for a in args), **kwargs)
+logger = get_logger(__name__)
 db_path = Path("transcripts.db")
 db_path.parent.mkdir(parents=True, exist_ok=True)
 

@@ -1,15 +1,12 @@
 import os
-import logging
-import builtins
 import requests
 from dotenv import load_dotenv
-from common import setup_logging
+from common import setup_logging, get_logger
 
 # Load environment variables from .env
 load_dotenv()
 setup_logging()
-builtins.print = lambda *args, **kwargs: logging.getLogger(__name__).info(" ".join(str(a) for a in args), **kwargs)
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 API_KEY = os.getenv("WHISPERAPI")
 AUDIO_DIR = os.getenv("AUDIO")
 TRANSCRIPTS_DIR = os.getenv("TRANSCRIPTS")

@@ -1,10 +1,8 @@
 import os
 import json
-import logging
-import builtins
 from dotenv import load_dotenv
 from openai import OpenAI
-from common import setup_logging
+from common import setup_logging, get_logger
 
 # === Load environment ===
 load_dotenv()
@@ -14,8 +12,7 @@ SUMMARY_DIR = os.getenv("SUMMARIES")
 
 client = OpenAI(api_key=OPENAI_API_KEY)
 setup_logging()
-builtins.print = lambda *args, **kwargs: logging.getLogger(__name__).info(" ".join(str(a) for a in args))
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 # === Parameters ===
 CHUNK_SIZE = 7000  # characters

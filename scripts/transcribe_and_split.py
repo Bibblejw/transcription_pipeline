@@ -1,18 +1,15 @@
 import os
 import sqlite3
-import logging
-import builtins
 from pathlib import Path
 from pydub import AudioSegment
 from dotenv import load_dotenv
 import whisper
-from common import setup_logging
+from common import setup_logging, get_logger
 
 # === Load environment ===
 load_dotenv()
 setup_logging()
-builtins.print = lambda *args, **kwargs: logging.getLogger(__name__).info(" ".join(str(a) for a in args), **kwargs)
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 AUDIO_DIR = Path(os.getenv("AUDIO"))
 SEGMENT_DIR = Path(os.getenv("AUDIO_SEGMENTS", "/mnt/audio/audio_segments")).resolve()

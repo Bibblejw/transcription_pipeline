@@ -1,15 +1,13 @@
 import os
-import logging
-import builtins
 import smtplib
 from email.message import EmailMessage
 from dotenv import load_dotenv
-from common import setup_logging
+from common import setup_logging, get_logger
 
 # === Load environment ===
 load_dotenv()
 setup_logging()
-builtins.print = lambda *args, **kwargs: logging.getLogger(__name__).info(" ".join(str(a) for a in args), **kwargs)
+logger = get_logger(__name__)
 SMTP_SERVER = os.getenv("SMTP_SERVER")
 SMTP_PORT = int(os.getenv("SMTP_PORT", 587))
 EMAIL_USER = os.getenv("EMAIL_USER")

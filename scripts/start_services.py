@@ -1,13 +1,10 @@
 import subprocess
 import sys
-import logging
-import builtins
 from pathlib import Path
-from common import setup_logging
+from common import setup_logging, get_logger
 
 setup_logging()
-builtins.print = lambda *args, **kwargs: logging.getLogger(__name__).info(" ".join(str(a) for a in args), **kwargs)
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -16,7 +13,7 @@ def main():
     processes = []
     try:
         monitor_cmd = [sys.executable, str(ROOT / "scripts" / "monitor.py")]
-        dashboard_cmd = ["uvicorn", "app:app", "--reload"]
+        dashboard_cmd = ["uvicorn", "app:app", "--reload", "--host", "0.0.0.0"]
 
         logger.info("Starting monitor...")
         processes.append(
