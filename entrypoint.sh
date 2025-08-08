@@ -11,6 +11,12 @@ if [ -f ".venv/bin/activate" ]; then
     source .venv/bin/activate
 fi
 
+# Install dependencies if core packages are missing
+if ! python -c "import fastapi, requests, pydub" >/dev/null 2>&1; then
+    echo "📦 Installing core Python dependencies..."
+    pip install fastapi requests pydub >/dev/null
+fi
+
 # Enforce Python 3.11 for local runs to avoid compatibility issues
 PY_VER=$(python -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")')
 if [ "$PY_VER" != "3.11" ]; then
