@@ -1,18 +1,19 @@
 import os
 import time
 import subprocess
+from pathlib import Path
+
+import requests
 from dotenv import load_dotenv
+
 from common import setup_logging, get_logger
+from transcribe_and_split import transcribe_and_split
 
 load_dotenv()
 setup_logging()
 logger = get_logger(__name__)
 
 AUDIO_DIR = os.getenv("AUDIO")
-TRANSCRIPTS_DIR = os.getenv("TRANSCRIPTS")
-TRANSCRIBE_SCRIPT = "transcribe.py"
-IDENTIFY_SCRIPT = "identify_speakers.py"
-SUMMARISE_SCRIPT = "summarise.py"
 
 POLL_INTERVAL = 60  # seconds
 
@@ -25,44 +26,46 @@ def get_all_audio_files():
                 files.append(full_path)
     return files
 
-def filename_to_transcript_name(audio_path):
-    # Convert e.g. "2025-08-03\\14-10-00.m4a" to "2025-08-03_14-10-00.txt"
-    rel_path = os.path.relpath(audio_path, AUDIO_DIR)
-    date_part, time_file = os.path.split(rel_path)
-    time_part = os.path.splitext(time_file)[0]
-    flat_name = f"{date_part}_{time_part}".replace("\\", "_").replace("/", "_") + ".txt"
-    return flat_name
-
-def run_pipeline():
+def process_file(audio_path):
+    """Transcribe, identify speakers, and summarise a single audio file."""
     try:
-        logger.info("🔁 Running transcription...")
-        subprocess.run(["python", TRANSCRIBE_SCRIPT], check=True)
+        logger.info(f"🔁 Transcribing and splitting: {audio_path}")
+        recording_id = transcribe_and_split(Path(audio_path).resolve())
+        if recording_id is None:
+            logger.info("⏭️  File already processed or failed during transcription.")
+            return False
 
-        logger.info("🧠 Running speaker identification...")
-        subprocess.run(["python", IDENTIFY_SCRIPT], check=True)
+        logger.info(f"🧠 Identifying speakers for recording {recording_id}...")
+        subprocess.run(
+            ["python", "speaker_identification.py", str(recording_id)], check=True
+        )
 
-        logger.info("📝 Running summarisation...")
-        subprocess.run(["python", SUMMARISE_SCRIPT], check=True)
-
+        logger.info(f"📝 Requesting summarisation for recording {recording_id}...")
+        resp = requests.post(
+            f"http://127.0.0.1:8000/api/recordings/{recording_id}/summarize"
+        )
+        resp.raise_for_status()
         logger.info("✅ All stages completed.\n")
+        return True
     except subprocess.CalledProcessError:
-        logger.exception("❌ Error during processing")
+        logger.exception("❌ Error during speaker identification")
+    except requests.RequestException:
+        logger.exception("❌ Error during summarisation request")
+    except Exception:
+        logger.exception("❌ Unexpected error during processing")
+    return False
 
 def monitor_loop():
     logger.info(f"📡 Polling '{AUDIO_DIR}' every {POLL_INTERVAL} seconds...")
     while True:
-        unprocessed_found = False
+        processed_any = False
         audio_files = get_all_audio_files()
         for audio_path in audio_files:
-            transcript_name = filename_to_transcript_name(audio_path)
-            transcript_path = os.path.join(TRANSCRIPTS_DIR, transcript_name)
-            if not os.path.exists(transcript_path):
-                logger.info(f"🎙️ New file detected: {audio_path}")
-                run_pipeline()
-                unprocessed_found = True
+            if process_file(audio_path):
+                processed_any = True
                 break  # Stop after one new file to avoid overlap
 
-        if not unprocessed_found:
+        if not processed_any:
             logger.info("📭 No new files detected.")
         time.sleep(POLL_INTERVAL)
 
