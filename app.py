@@ -290,9 +290,24 @@ def run_speaker_identification(recording_id: int):
         print(f"⚠️ Speaker identification failed: {exc}")
 
 
+def run_label_speakers(recording_id: int):
+    """Invoke the speaker labelling script for a given recording."""
+    script = Path(__file__).parent / "scripts" / "label_speakers.py"
+    try:
+        subprocess.run([sys.executable, str(script), str(recording_id)], check=True)
+    except subprocess.CalledProcessError as exc:
+        print(f"⚠️ Label speakers failed: {exc}")
+
+
 @app.post("/api/recordings/{recording_id}/identify")
 def identify_recording(recording_id: int, background_tasks: BackgroundTasks):
     background_tasks.add_task(run_speaker_identification, recording_id)
+    return {"status": "started"}
+
+
+@app.post("/api/recordings/{recording_id}/label_speakers")
+def label_recording_speakers(recording_id: int, background_tasks: BackgroundTasks):
+    background_tasks.add_task(run_label_speakers, recording_id)
     return {"status": "started"}
 
 
