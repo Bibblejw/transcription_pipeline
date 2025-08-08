@@ -15,7 +15,8 @@ fi
 PY_VER=$(python -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")')
 if [ "$PY_VER" != "3.11" ]; then
     echo "❗️ Python $PY_VER detected. This project officially supports Python 3.11. Please use Python 3.11." >&2
-    exit 1
+    echo "Launching a shell so you can switch to Python 3.11 and then rerun './entrypoint.sh'." >&2
+    exec "${SHELL:-/bin/bash}" || exit 1
 fi
 
 DB_PATH="${TRANSCRIPTS_DB:-/mnt/db/transcripts.db}"
